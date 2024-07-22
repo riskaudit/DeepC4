@@ -43,7 +43,7 @@ with rasterio.open(
         driver = "GTiff",
         crs = raster.crs,
         transform = raster.transform,
-        dtype = rasterio.uint8,
+        dtype = rasterio.uint16,
         count = 1,
         width = raster.width,
         height = raster.height) as dst:
