@@ -155,27 +155,35 @@ for i in range(len(uniq_year)):
     yr.append(uniq_year[i])
     yr.append(uniq_year[i])
 # %%
-for i in range(14,16):
+for i in range(8,len(yr)):
     print(i)
     print(yr[i])
     ims_selected = ims[i]
     uniq_year_selected = yr[i]
-    fishnet = geemap.fishnet(aoi, rows=10, cols=10)
+    nrow = 7
+    ncol = 7
+    fishnet = geemap.fishnet(aoi, rows=nrow, cols=ncol)
+    nlist = fishnet.size().getInfo()
 
-    if i % 2:
-        geemap.download_ee_image_tiles(image=ims_selected, 
-                                            features=fishnet, 
-                                            prefix=str(uniq_year_selected)+"_VH_LEVEL0_RWA_",
-                                            out_dir=output_path, 
-                                            scale=10, 
-                                            crs='EPSG:4326')
-    else:
-        geemap.download_ee_image_tiles(image=ims_selected, 
-                                            features=fishnet, 
-                                            prefix=str(uniq_year_selected)+"_VV_LEVEL0_RWA_",
-                                            out_dir=output_path, 
-                                            scale=10, 
-                                            crs='EPSG:4326')
+    im_new = []
+    fn_new = []
+    rgn_new = []
+
+    if i != 14 and i != 15: 
+        for j in range(nlist):
+
+            if not os.path.isfile(fns[i][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif") or (os.path.getsize(fns[i][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif")/(1<<10)) < 1 or not os.path.isfile(fns[i][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif") or (os.path.getsize(fns[i][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif")/(1<<10)) < 1:
+
+                a = fishnet.toList(nlist).get(j).getInfo()
+                im_new.append(ims_selected.clip(
+                    ee.Geometry.Polygon(a['geometry']['coordinates'])))
+                fn_new.append(fns[i][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif")
+                rgn_new.append(ee.Geometry.Polygon(a['geometry']['coordinates']))
+        
+
+    if len(im_new) != 0:
+        download_parallel(zip(im_new, fn_new, rgn_new))
+ 
 
 
 # %%
