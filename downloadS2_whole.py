@@ -234,8 +234,8 @@ Map = geemap.Map()
 Map.addLayer(aoi)
 Map
 # %% get direction and orbit number
-startDATE = ee.Date('2019-01-01')
-endDATE = ee.Date('2019-12-31')
+startDATE = ee.Date('2018-01-01')
+endDATE = ee.Date('2023-12-31')
 im_coll = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
             .filterBounds(aoi)
             .filterDate(startDATE,endDATE)
@@ -248,12 +248,19 @@ uniq_year = list(map(int, list(set(ymd_year))))
 uniq_year.sort()
 uniq_year
 # %%
-result_path = '/Users/joshuadimasaka/Desktop/PhD/GitHub/rwa'
+result_path = '/Users/joshuadimasaka/Desktop/PhD/GitHub/rwa/data/S2'
 # %%
-ims = []
-fns = []
-rgns = []
 for i in range(len(uniq_year)):
+
+# %%
+    ims = []
+    fns = []
+    rgns = []
+
+    print(i)
+    print(uniq_year[i])
+    uniq_year_selected = uniq_year[i]
+
     startDATE = ee.Date(str(uniq_year[i]) + '-01-01')
     endDATE = ee.Date(str(uniq_year[i]) + '-12-31')
 
@@ -280,71 +287,57 @@ for i in range(len(uniq_year)):
                         .map(apply_cld_shdw_mask)
                         .median())
 
-    ims.append(s2_sr_median.select(['B4', 'B3', 'B2']).clip(aoi))
-    fns.append(str(result_path+'/'+str(uniq_year[i])+"_RGB.tif"))
+    # ims.append(s2_sr_median.select(['B4', 'B3', 'B2']).clip(aoi))
+    ims.append(s2_sr_median.select(['B5']).clip(aoi))
+    ims.append(s2_sr_median.select(['B6']).clip(aoi))
+    ims.append(s2_sr_median.select(['B7']).clip(aoi))
+    ims.append(s2_sr_median.select(['B8A']).clip(aoi))
+    ims.append(s2_sr_median.select(['B8']).clip(aoi))
+    ims.append(s2_sr_median.select(['B11']).clip(aoi))
+    ims.append(s2_sr_median.select(['B12']).clip(aoi))
+
+    # fns.append(str(result_path+'/'+str(uniq_year[i])+"_RGB.tif"))
+    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B5_RED1.tif"))
+    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B6_RED2.tif"))
+    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B7_RED3.tif"))
+    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8A_RED4.tif"))
+    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8_NIR.tif"))
+    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8_SWIR1.tif"))
+    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8_SWIR2.tif"))
+
+    # rgns.append(aoi)
+    rgns.append(aoi)
+    rgns.append(aoi)
+    rgns.append(aoi)
+    rgns.append(aoi)
+    rgns.append(aoi)
+    rgns.append(aoi)
     rgns.append(aoi)
 
-ims_selected = ims[0]
-uniq_year_selected = uniq_year[0]
-fishnet = geemap.fishnet(aoi, rows=6, cols=6)
-geemap.download_ee_image_tiles(image=ims_selected, 
-                                    features=fishnet, 
-                                    prefix=str(uniq_year_selected)+"_RGB_LEVEL0_RWANDA_",
-                                    out_dir=result_path, 
-                                    scale=10, 
-                                    crs='EPSG:4326')
 
-# ims_selected = ims[1]
-# uniq_year_selected = uniq_year[1]
-# fishnet = geemap.fishnet(aoi, rows=6, cols=6)
-# geemap.download_ee_image_tiles(image=ims_selected, 
-#                                     features=fishnet, 
-#                                     prefix=str(uniq_year_selected)+"_RGB_LEVEL2_DHAKA_",
-#                                     out_dir=result_path, 
-#                                     scale=10, 
-#                                     crs='EPSG:4326')
+    for k in range(len(ims)):
 
-# ims_selected = ims[2]
-# uniq_year_selected = uniq_year[2]
-# fishnet = geemap.fishnet(aoi, rows=6, cols=6)
-# geemap.download_ee_image_tiles(image=ims_selected, 
-#                                     features=fishnet, 
-#                                     prefix=str(uniq_year_selected)+"_RGB_LEVEL2_DHAKA_",
-#                                     out_dir=result_path, 
-#                                     scale=10, 
-#                                     crs='EPSG:4326')
+        ims_selected = ims[k]
+        im_new = []
+        fn_new = []
+        rgn_new = []
 
-# ims_selected = ims[3]
-# uniq_year_selected = uniq_year[3]
-# fishnet = geemap.fishnet(aoi, rows=6, cols=6)
-# geemap.download_ee_image_tiles(image=ims_selected, 
-#                                     features=fishnet, 
-#                                     prefix=str(uniq_year_selected)+"_RGB_LEVEL2_DHAKA_",
-#                                     out_dir=result_path, 
-#                                     scale=10, 
-#                                     crs='EPSG:4326')
+        nrow = 10
+        ncol = 10
+        fishnet = geemap.fishnet(aoi, rows=nrow, cols=ncol)
+        nlist = fishnet.size().getInfo()
 
-# ims_selected = ims[4]
-# uniq_year_selected = uniq_year[4]
-# fishnet = geemap.fishnet(aoi, rows=6, cols=6)
-# geemap.download_ee_image_tiles(image=ims_selected, 
-#                                     features=fishnet, 
-#                                     prefix=str(uniq_year_selected)+"_RGB_LEVEL2_DHAKA_",
-#                                     out_dir=result_path, 
-#                                     scale=10, 
-#                                     crs='EPSG:4326')
+        for j in range(nlist):
 
-# ims_selected = ims[5]
-# uniq_year_selected = uniq_year[5]
-# fishnet = geemap.fishnet(aoi, rows=6, cols=6)
-# geemap.download_ee_image_tiles(image=ims_selected, 
-#                                     features=fishnet, 
-#                                     prefix=str(uniq_year_selected)+"_RGB_LEVEL2_DHAKA_",
-#                                     out_dir=result_path, 
-#                                     scale=10, 
-#                                     crs='EPSG:4326')
-# # %%
-# if len(ims) != 0:
-#     download_parallel(zip(ims, fns, rgns))
+            if not os.path.isfile(fns[k][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif") or (os.path.getsize(fns[k][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif")/(1<<10)) < 1:
 
+                a = fishnet.toList(nlist).get(j).getInfo()
+                im_new.append(ims_selected.clip(
+                    ee.Geometry.Polygon(a['geometry']['coordinates'])))
+                fn_new.append(fns[k][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif")
+                rgn_new.append(ee.Geometry.Polygon(a['geometry']['coordinates']))
+        
+
+        if len(im_new) != 0:
+            download_parallel(zip(im_new, fn_new, rgn_new))
 # %%
