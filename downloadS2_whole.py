@@ -208,24 +208,8 @@ def apply_cld_shdw_mask(img):
 
     # Subset reflectance bands and update their masks, return the result.
     return img.select('B.*').updateMask(not_cld_shdw)
-# %%
-# custom_list = [5] #, 29, 30, 42]
-# %%
-# for ic in range(len(custom_list)):  #range(len(country_list)): 
-    # %%
-# icountry = country_list[custom_list[ic]]
-# geoJSON_path = meteor_path + '/' + icountry + '/whole/extents'
-# filenamelist = os.listdir(geoJSON_path); filenamelist.sort()
-# if '.DS_Store' in filenamelist: filenamelist.remove('.DS_Store')
-# %%
-# for ifilename in range(len(filenamelist)): # range(custom start index,len(filenamelist)):
-# %%
-# filename = filenamelist[ifilename]
-# result_path = output_path+'/'+icountry+'/'+filename[:-9]
-# if not os.path.exists(result_path):
-#     os.makedirs(result_path)
 
-
+# %%
 # check for city name here: https://code.earthengine.google.com/?scriptPath=Examples:Datasets/FAO/FAO_GAUL_2015_level2_FeatureView
 lsib = ee.FeatureCollection("FAO/GAUL/2015/level0");
 fcollection = lsib.filterMetadata('ADM0_NAME','equals','Rwanda');
@@ -251,93 +235,98 @@ uniq_year
 result_path = '/Users/joshuadimasaka/Desktop/PhD/GitHub/rwa/data/S2'
 # %%
 for i in range(len(uniq_year)):
+    if i != 0 and i!=4: 
+        ims = []
+        fns = []
+        rgns = []
 
-# %%
-    ims = []
-    fns = []
-    rgns = []
+        print(i)
+        print(uniq_year[i])
+        uniq_year_selected = uniq_year[i]
 
-    print(i)
-    print(uniq_year[i])
-    uniq_year_selected = uniq_year[i]
+        startDATE = ee.Date(str(uniq_year[i]) + '-01-01')
+        endDATE = ee.Date(str(uniq_year[i]) + '-12-31')
 
-    startDATE = ee.Date(str(uniq_year[i]) + '-01-01')
-    endDATE = ee.Date(str(uniq_year[i]) + '-12-31')
+        AOI = aoi
+        CLOUD_FILTER = 60
+        CLD_PRB_THRESH = 40
+        NIR_DRK_THRESH = 0.15
+        CLD_PRJ_DIST = 2
+        BUFFER = 100
+        im_selected = im_coll.filterDate(startDATE,endDATE)
+        s2_cloudless_coll = (ee.ImageCollection('COPERNICUS/S2_CLOUD_PROBABILITY')
+                    .filterBounds(aoi)
+                    .filterDate(startDATE, endDATE)
+                    .sort('system:time_start'))   
+        s2_sr_cld_col_eval = ee.ImageCollection(ee.Join.saveFirst('s2cloudless').apply(**{
+                                            'primary': im_selected,
+                                            'secondary': s2_cloudless_coll,
+                                            'condition': ee.Filter.equals(**{
+                                                'leftField': 'system:index',
+                                                'rightField': 'system:index'
+                                            })
+                                        }))
+        s2_sr_median = (s2_sr_cld_col_eval.map(add_cld_shdw_mask)
+                            .map(apply_cld_shdw_mask)
+                            .median())
 
-    AOI = aoi
-    CLOUD_FILTER = 60
-    CLD_PRB_THRESH = 40
-    NIR_DRK_THRESH = 0.15
-    CLD_PRJ_DIST = 2
-    BUFFER = 100
-    im_selected = im_coll.filterDate(startDATE,endDATE)
-    s2_cloudless_coll = (ee.ImageCollection('COPERNICUS/S2_CLOUD_PROBABILITY')
-                .filterBounds(aoi)
-                .filterDate(startDATE, endDATE)
-                .sort('system:time_start'))   
-    s2_sr_cld_col_eval = ee.ImageCollection(ee.Join.saveFirst('s2cloudless').apply(**{
-                                        'primary': im_selected,
-                                        'secondary': s2_cloudless_coll,
-                                        'condition': ee.Filter.equals(**{
-                                            'leftField': 'system:index',
-                                            'rightField': 'system:index'
-                                        })
-                                    }))
-    s2_sr_median = (s2_sr_cld_col_eval.map(add_cld_shdw_mask)
-                        .map(apply_cld_shdw_mask)
-                        .median())
+        ims.append(s2_sr_median.select(['B4']).clip(aoi))
+        ims.append(s2_sr_median.select(['B3']).clip(aoi))
+        ims.append(s2_sr_median.select(['B2']).clip(aoi))
+        ims.append(s2_sr_median.select(['B5']).clip(aoi))
+        ims.append(s2_sr_median.select(['B6']).clip(aoi))
+        ims.append(s2_sr_median.select(['B7']).clip(aoi))
+        ims.append(s2_sr_median.select(['B8A']).clip(aoi))
+        ims.append(s2_sr_median.select(['B8']).clip(aoi))
+        ims.append(s2_sr_median.select(['B11']).clip(aoi))
+        ims.append(s2_sr_median.select(['B12']).clip(aoi))
 
-    # ims.append(s2_sr_median.select(['B4', 'B3', 'B2']).clip(aoi))
-    ims.append(s2_sr_median.select(['B5']).clip(aoi))
-    ims.append(s2_sr_median.select(['B6']).clip(aoi))
-    ims.append(s2_sr_median.select(['B7']).clip(aoi))
-    ims.append(s2_sr_median.select(['B8A']).clip(aoi))
-    ims.append(s2_sr_median.select(['B8']).clip(aoi))
-    ims.append(s2_sr_median.select(['B11']).clip(aoi))
-    ims.append(s2_sr_median.select(['B12']).clip(aoi))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_R.tif"))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_G.tif"))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_B.tif"))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_B5_RED1.tif"))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_B6_RED2.tif"))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_B7_RED3.tif"))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8A_RED4.tif"))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8_NIR.tif"))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8_SWIR1.tif"))
+        fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8_SWIR2.tif"))
 
-    # fns.append(str(result_path+'/'+str(uniq_year[i])+"_RGB.tif"))
-    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B5_RED1.tif"))
-    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B6_RED2.tif"))
-    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B7_RED3.tif"))
-    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8A_RED4.tif"))
-    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8_NIR.tif"))
-    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8_SWIR1.tif"))
-    fns.append(str(result_path+'/'+str(uniq_year[i])+"_B8_SWIR2.tif"))
-
-    # rgns.append(aoi)
-    rgns.append(aoi)
-    rgns.append(aoi)
-    rgns.append(aoi)
-    rgns.append(aoi)
-    rgns.append(aoi)
-    rgns.append(aoi)
-    rgns.append(aoi)
+        rgns.append(aoi)
+        rgns.append(aoi)
+        rgns.append(aoi)
+        rgns.append(aoi)
+        rgns.append(aoi)
+        rgns.append(aoi)
+        rgns.append(aoi)
+        rgns.append(aoi)
+        rgns.append(aoi)
+        rgns.append(aoi)
 
 
-    for k in range(len(ims)):
+        for k in range(len(ims)):
 
-        ims_selected = ims[k]
-        im_new = []
-        fn_new = []
-        rgn_new = []
+            ims_selected = ims[k]
+            im_new = []
+            fn_new = []
+            rgn_new = []
 
-        nrow = 10
-        ncol = 10
-        fishnet = geemap.fishnet(aoi, rows=nrow, cols=ncol)
-        nlist = fishnet.size().getInfo()
+            nrow = 10
+            ncol = 10
+            fishnet = geemap.fishnet(aoi, rows=nrow, cols=ncol)
+            nlist = fishnet.size().getInfo()
 
-        for j in range(nlist):
+            for j in range(nlist):
 
-            if not os.path.isfile(fns[k][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif") or (os.path.getsize(fns[k][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif")/(1<<10)) < 1:
+                if not os.path.isfile(fns[k][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif") or (os.path.getsize(fns[k][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif")/(1<<10)) < 1:
 
-                a = fishnet.toList(nlist).get(j).getInfo()
-                im_new.append(ims_selected.clip(
-                    ee.Geometry.Polygon(a['geometry']['coordinates'])))
-                fn_new.append(fns[k][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif")
-                rgn_new.append(ee.Geometry.Polygon(a['geometry']['coordinates']))
-        
+                    a = fishnet.toList(nlist).get(j).getInfo()
+                    im_new.append(ims_selected.clip(
+                        ee.Geometry.Polygon(a['geometry']['coordinates'])))
+                    fn_new.append(fns[k][:-4]+"_"+str(j+1)+"_of_"+str(nlist)+".tif")
+                    rgn_new.append(ee.Geometry.Polygon(a['geometry']['coordinates']))
+            
 
-        if len(im_new) != 0:
-            download_parallel(zip(im_new, fn_new, rgn_new))
+            if len(im_new) != 0:
+                download_parallel(zip(im_new, fn_new, rgn_new))
 # %%
