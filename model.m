@@ -37,14 +37,16 @@ y_height = zeros(size(mask));
 y_roof = zeros(size(mask));
 y_macrotaxo = zeros(size(mask));
 y_wall = zeros(size(mask));
-for rID = 258:length(label2rasterID.RASTER_ID1)
+
+%%
+for rID = 1:length(label2rasterID.RASTER_ID1)
     disp("start"), tic
-    if rID ~= 111 % Rudashya fix
 
-        if rID == length(label2rasterID.RASTER_ID1)
-            rID = 0;
-        end
-
+    if rID == length(label2rasterID.RASTER_ID1)
+        rID = 0;
+    end
+    if rID ~= 111 && ...
+       string(label2rasterID.NAME_3(find(label2rasterID.RASTER_ID1 == rID))) ~= "Lac Kivu" % Rudashya Fix and Lake Kivu Fix
 
         province = string(label2rasterID.NAME_1(find(label2rasterID.RASTER_ID1 == rID)));
         district = string(label2rasterID.NAME_2(find(label2rasterID.RASTER_ID1 == rID)));
@@ -52,6 +54,8 @@ for rID = 258:length(label2rasterID.RASTER_ID1)
         
         if rID == 112
             idx =   (mask == rID | mask == (rID-1)) & (dynLabel == 6);
+        else
+            idx =   (mask == rID) & (dynLabel == 6);
         end
         iQ =    Q.Province == province & ...
                 Q.Distict == district & ...
@@ -489,7 +493,7 @@ for rID = 258:length(label2rasterID.RASTER_ID1)
     end
 end
 
-geotiffwrite("y_height.tif",single(y_height),maskR)
-geotiffwrite("y_roof.tif",single(y_roof),maskR)
-geotiffwrite("y_macrotaxo.tif",single(y_macrotaxo),maskR)
-geotiffwrite("y_wall.tif",single(y_wall),maskR)
+geotiffwrite("y_height.tif",(y_height),maskR)
+geotiffwrite("y_roof.tif",(y_roof),maskR)
+geotiffwrite("y_macrotaxo.tif",(y_macrotaxo),maskR)
+geotiffwrite("y_wall.tif",(y_wall),maskR)
