@@ -18,7 +18,12 @@ label2rasterID = readtable("data/MASK/MAPPING_RASTER_ID_AND_LABEL.xlsx");
 [nir, ~] = readgeoraster("data/SWIR12NIR/NIR/2022_NIR_LEVEL0_RWANDA_WHOLE_10M.tif");
 [dynProb, ~] = readgeoraster("data/DYNAMIC/builtAveProb/2022_DYNNAMICWORLD_builtAveProb_LEVEL0_RWANDA_WHOLE_10M.tif");
 [dynLabel, ~] = readgeoraster("data/DYNAMIC/labelModeCat/2022_DYNNAMICWORLD_labelModeCat_LEVEL0_RWANDA_WHOLE_10M.tif");
-[bldgftprnt, ~] = readgeoraster("data/BLDG/MICROSOFT 2014-2021/rasterized_microsoftbldg.tif");
+[bldgftprnt_osm, ~] = readgeoraster("data/BLDG/OPENSTREETMAP/rasterized_OSM.tif");
+[bldgftprnt_ove, ~] = readgeoraster("data/BLDG/OVERTURE/rasterized_Overture.tif");
+[bldgftprnt_goo, ~] = readgeoraster("data/BLDG/GOOGLE 042021-052023/rasterized_googleOpenBldg.tif");
+[bldgftprnt_mic, ~] = readgeoraster("data/BLDG/MICROSOFT 2014-2021/rasterized_microsoftbldg.tif");
+bldgftprnt = (bldgftprnt_osm > 0) | (bldgftprnt_ove > 0) | (bldgftprnt_goo > 0) | (bldgftprnt_mic > 0);
+% geotiffwrite("data/BLDG/bldgcombined.tif",single(bldgftprnt),maskR)
 
 %% load census records
 census_fpath = "data/CENSUS 2022/census2022.csv";
@@ -39,7 +44,7 @@ y_macrotaxo = zeros(size(mask));
 y_wall = zeros(size(mask));
 
 %%
-for rID = 1:length(label2rasterID.RASTER_ID1)
+for rID = 200:length(label2rasterID.RASTER_ID1)
     disp("start"), tic
 
     if rID == length(label2rasterID.RASTER_ID1)
@@ -52,7 +57,7 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
         district = string(label2rasterID.NAME_2(find(label2rasterID.RASTER_ID1 == rID)));
         sector = string(label2rasterID.NAME_3(find(label2rasterID.RASTER_ID1 == rID)));
         
-        if rID == 112
+        if rID == 112 % minor fix to consider merging of two sectors
             idx =   (mask == rID | mask == (rID-1)) & (dynLabel == 6);
         else
             idx =   (mask == rID) & (dynLabel == 6);
@@ -96,11 +101,9 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
         % factor of 100%.
         
         % another big assumption here is the law of mass conversation of buildings.
-        % we are making an assumptino where a 10x10-m pixel would contain only one
-        % building, on average. Or, to address this, we can compute the average
-        % area of building from bldgftprnt
-        average_area_x_bldgftprnt    =  sum(bldgftprnt.*idx, 'all') ./ ...
-                                        sum(double(bldgftprnt.*idx>0), 'all');
+        % to address this, we can consider the average
+        % area of building from bldgftprn, based on Paul's estimation
+        average_area_x_bldgftprnt    =  60; %m2/bldg
         % this is interpreted as the average arae of a building in a given grid,
         % hence, the number of pixels needed for a single building would be:
         n_pixels_per_bldg = 100 ./ average_area_x_bldgftprnt; %pixels/nbldg
@@ -117,40 +120,78 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
         
         % let's now obtain the p_threshod of x_dynProb to meet the need of
         % n_pixels_remaining_nBlds
-        remaining_idx = full(idx & ~x_bldgftprnt);
-        p_max = max(max(full(remaining_idx) .* x_dynProb));
-        
-        p = p_max; target = 0;
-        while target < double(npixels_remaining_nBldg)
-            p = p - 0.001;
+        if npixels_remaining_nBldg > 0
+            remaining_idx = full(idx & ~x_bldgftprnt);
+            p_max = max(max(full(remaining_idx) .* x_dynProb));
+            
+            p = p_max; target = 0;
+            while target < double(npixels_remaining_nBldg)
+                p = p - 0.001;
+                target = sum(remaining_idx .* (x_dynProb >= p), 'all');
+            end
+            p = p + 2*0.001; 
             target = sum(remaining_idx .* (x_dynProb >= p), 'all');
-        end
-        p = p + 2*0.001; 
-        target = sum(remaining_idx .* (x_dynProb >= p), 'all');
-        
-        while target < double(npixels_remaining_nBldg)
-            p = p - 0.0001;
+            
+            while target < double(npixels_remaining_nBldg)
+                p = p - 0.0001;
+                target = sum(remaining_idx .* (x_dynProb >= p), 'all');
+            end
+            p = p + 2*0.0001; 
             target = sum(remaining_idx .* (x_dynProb >= p), 'all');
-        end
-        p = p + 2*0.0001; 
-        target = sum(remaining_idx .* (x_dynProb >= p), 'all');
-        
-        while target < double(npixels_remaining_nBldg)
-            p = p - 0.00001;
+            
+            while target < double(npixels_remaining_nBldg)
+                p = p - 0.00001;
+                target = sum(remaining_idx .* (x_dynProb >= p), 'all');
+            end
+            p = p + 2*0.00001; 
             target = sum(remaining_idx .* (x_dynProb >= p), 'all');
-        end
-        p = p + 2*0.00001; 
-        target = sum(remaining_idx .* (x_dynProb >= p), 'all');
-        
-        while target < double(npixels_remaining_nBldg)
-            p = p - 0.000001;
+            
+            while target < double(npixels_remaining_nBldg)
+                p = p - 0.000001;
+                target = sum(remaining_idx .* (x_dynProb >= p), 'all');
+            end
+            p = p + 2*0.000001; 
             target = sum(remaining_idx .* (x_dynProb >= p), 'all');
+            
+            valid_idx = full(remaining_idx .* (x_dynProb >= p) | x_bldgftprnt);
+            disp("Valid Idx Obtained"), toc, tic
+        else % npixels_remaining_nBldg < 0 and often it's not == 0
+            tmp = x_dynProb(x_bldgftprnt==1);
+            p_min = min(tmp);
+
+            p = p_min; target = full(sum(x_bldgftprnt, 'all'));
+            while target > (sum(nQ.numBuilding).*n_pixels_per_bldg)
+                p = p + 0.001;
+                target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
+            end
+            p = p - 2*0.001; 
+            target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
+            
+            while target > (sum(nQ.numBuilding).*n_pixels_per_bldg)
+                p = p + 0.0001;
+                target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
+            end
+            p = p - 2*0.0001; 
+            target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
+
+            while target > (sum(nQ.numBuilding).*n_pixels_per_bldg)
+                p = p + 0.00001;
+                target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
+            end
+            p = p - 2*0.00001; 
+            target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
+
+            while target > (sum(nQ.numBuilding).*n_pixels_per_bldg)
+                p = p + 0.000001;
+                target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
+            end
+            p = p - 2*0.000001; 
+            target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
+
+            valid_idx = full(x_bldgftprnt .* (x_dynProb >= p));
+            disp("Valid Idx Obtained"), toc, tic
+
         end
-        p = p + 2*0.000001; 
-        target = sum(remaining_idx .* (x_dynProb >= p), 'all');
-        
-        valid_idx = full(remaining_idx .* (x_dynProb >= p) | x_bldgftprnt);
-        disp("Valid Idx Obtained"), toc, tic
         %% covariates: now that we identified all the valid candidate locations, 
         % let's consider the EO datasets now for possible clustering
         % EO-data:
@@ -249,8 +290,13 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
         % Constrained k-means clustering. Microsoft Research, Redmond, 20(0), 0.
         % https://uk.mathworks.com/matlabcentral/fileexchange/117355-constrained-k-means
         tau = floor(summary_RoofMaterial .* size(X,1));
-        rng(1,"v5normal"); 
-        [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 100);
+
+        try
+            rng(1,"v5normal"); 
+            [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 100);
+        catch MyErr
+            [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 100);
+        end
         
         % assign roof material
         roof_assignment = strings(size(X,1),1);
@@ -493,7 +539,7 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
     end
 end
 
-geotiffwrite("y_height.tif",(y_height),maskR)
-geotiffwrite("y_roof.tif",(y_roof),maskR)
-geotiffwrite("y_macrotaxo.tif",(y_macrotaxo),maskR)
-geotiffwrite("y_wall.tif",(y_wall),maskR)
+geotiffwrite("output/20240730/y_height.tif",(y_height),maskR)
+geotiffwrite("output/20240730/y_roof.tif",(y_roof),maskR)
+geotiffwrite("output/20240730/y_macrotaxo.tif",(y_macrotaxo),maskR)
+geotiffwrite("output/20240730/y_wall.tif",(y_wall),maskR)
