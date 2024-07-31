@@ -44,7 +44,7 @@ y_macrotaxo = zeros(size(mask));
 y_wall = zeros(size(mask));
 
 %%
-for rID = 390:length(label2rasterID.RASTER_ID1)
+for rID = 397:length(label2rasterID.RASTER_ID1)
     disp("start"), tic
 
     if rID == length(label2rasterID.RASTER_ID1)
@@ -292,7 +292,7 @@ for rID = 390:length(label2rasterID.RASTER_ID1)
         tau = floor(summary_RoofMaterial .* size(X,1));
 
         if sum(tau) ~= size(X,1)
-            ttmp = find(tau == max(tau));
+            ttmp = find(tau == max(tau),1);
             tau(ttmp) = tau(ttmp) + (size(X,1)-sum(tau));
         end
 
@@ -351,6 +351,11 @@ for rID = 390:length(label2rasterID.RASTER_ID1)
                 for g = 1:nelem
                     tau_X(tempelem == maxelem(g)) = 1;
                 end
+            end
+
+            if sum(tau_X) ~= size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:),1)
+                ttmp = find(tau_X == max(tau_X),1);
+                tau_X(ttmp) = tau_X(ttmp) + (size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:),1)-sum(tau_X));
             end
     
             try
@@ -432,7 +437,13 @@ for rID = 390:length(label2rasterID.RASTER_ID1)
                             jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3) ./ ...
                             sum(jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3))));
                 end
-    
+
+                if sum(tau_XX) ~= size(X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                                            roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:),1)
+                    ttmp = find(tau_XX == max(tau_XX),1);
+                    tau_XX(ttmp) = tau_XX(ttmp) + (size(X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                                                             roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:),1)      -sum(tau_XX));
+                end   
     
                 try
                     rng(1,"v5normal"); 
@@ -486,7 +497,7 @@ for rID = 390:length(label2rasterID.RASTER_ID1)
             end
 
             if sum(tau_XXX) ~= size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)
-                ttmp = find(tau_XXX == max(tau_XXX));
+                ttmp = find(tau_XXX == max(tau_XXX),1);
                 tau_XXX(ttmp) = tau_XXX(ttmp) + (size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)-sum(tau_XXX));
             end
             
@@ -549,7 +560,8 @@ for rID = 390:length(label2rasterID.RASTER_ID1)
     end
 end
 
-geotiffwrite("output/20240730/y_height.tif",(y_height),maskR)
-geotiffwrite("output/20240730/y_roof.tif",(y_roof),maskR)
-geotiffwrite("output/20240730/y_macrotaxo.tif",(y_macrotaxo),maskR)
-geotiffwrite("output/20240730/y_wall.tif",(y_wall),maskR)
+%%
+geotiffwrite("output/20240731/y_height.tif",(y_height),maskR)
+geotiffwrite("output/20240731/y_roof.tif",(y_roof),maskR)
+geotiffwrite("output/20240731/y_macrotaxo.tif",(y_macrotaxo),maskR)
+geotiffwrite("output/20240731/y_wall.tif",(y_wall),maskR)
