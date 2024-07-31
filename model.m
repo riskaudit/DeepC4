@@ -44,7 +44,8 @@ y_macrotaxo = zeros(size(mask));
 y_wall = zeros(size(mask));
 
 %%
-for rID = 397:length(label2rasterID.RASTER_ID1)
+for rID = 1:length(label2rasterIDsss.RASTER_ID1)
+
     disp("start"), tic
 
     if rID == length(label2rasterID.RASTER_ID1)
@@ -62,6 +63,12 @@ for rID = 397:length(label2rasterID.RASTER_ID1)
         else
             idx =   (mask == rID) & (dynLabel == 6);
         end
+
+        disp(rID)
+        disp(province)
+        disp(district)
+        disp(sector)
+
         iQ =    Q.Province == province & ...
                 Q.Distict == district & ...
                 Q.Sector == sector & ...
@@ -104,19 +111,29 @@ for rID = 397:length(label2rasterID.RASTER_ID1)
         % to address this, we can consider the average
         % area of building from bldgftprn, based on Paul's estimation
         average_area_x_bldgftprnt    =  60; %m2/bldg
+        
         % this is interpreted as the average arae of a building in a given grid,
         % hence, the number of pixels needed for a single building would be:
-        n_pixels_per_bldg = 100 ./ average_area_x_bldgftprnt; %pixels/nbldg
+        % n_bldg_per_pixel = (m2/pixel) / (m2/bldg)
+        % n_bldg_per_pixel = (m2/pixel) x (bldg/m2)
+        % n_bldg_per_pixel = bldg/pixel
+        n_bldg_per_pixel = 100 ./ average_area_x_bldgftprnt; % number of bldg per pixel
         
         % this follows that the microsoft x_bldgftprnt would correspond to this 
         % number of building
-        nBldgFromBldgData = full(sum(x_bldgftprnt, 'all')) ./ n_pixels_per_bldg;
-        
+        % nBldgFromBldgData = (number of pixels) x (bldg/pixel)
+        % nBldgFromBldgData = number of bldgs
+        nBldgFromBldgData = full(sum(x_bldgftprnt, 'all')) .* n_bldg_per_pixel;
+
         % as we said, microsoft EO-derived data is imperfect and may always be
         % less than what the census would give us. let's now compute for the
         % remaining nBldg that we will obtain using the values of x_dynProb
         remaining_nBldg = sum(nQ.numBuilding) - nBldgFromBldgData;
-        npixels_remaining_nBldg = remaining_nBldg * n_pixels_per_bldg;
+
+        % npixels_remaining_nBldg = bldgs ./ (bldg/pixel)
+        % npixels_remaining_nBldg = bldgs x (pixel/bldg)
+        % npixels_remaining_nBldg = number of pixels
+        npixels_remaining_nBldg = remaining_nBldg ./ n_bldg_per_pixel;
         
         % let's now obtain the p_threshod of x_dynProb to meet the need of
         % n_pixels_remaining_nBlds
@@ -154,34 +171,34 @@ for rID = 397:length(label2rasterID.RASTER_ID1)
             target = sum(remaining_idx .* (x_dynProb >= p), 'all');
             
             valid_idx = full(remaining_idx .* (x_dynProb >= p) | x_bldgftprnt);
-            disp("Valid Idx Obtained"), toc, tic
+            toc, disp("Valid Idx Obtained"), tic
         else % npixels_remaining_nBldg < 0 and often it's not == 0
             tmp = x_dynProb(x_bldgftprnt==1);
             p_min = min(tmp);
 
             p = p_min; target = full(sum(x_bldgftprnt, 'all'));
-            while target > (sum(nQ.numBuilding).*n_pixels_per_bldg)
+            while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
                 p = p + 0.001;
                 target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             end
             p = p - 2*0.001; 
             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             
-            while target > (sum(nQ.numBuilding).*n_pixels_per_bldg)
+            while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
                 p = p + 0.0001;
                 target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             end
             p = p - 2*0.0001; 
             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
 
-            while target > (sum(nQ.numBuilding).*n_pixels_per_bldg)
+            while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
                 p = p + 0.00001;
                 target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             end
             p = p - 2*0.00001; 
             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
 
-            while target > (sum(nQ.numBuilding).*n_pixels_per_bldg)
+            while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
                 p = p + 0.000001;
                 target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             end
@@ -189,7 +206,7 @@ for rID = 397:length(label2rasterID.RASTER_ID1)
             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
 
             valid_idx = full(x_bldgftprnt .* (x_dynProb >= p));
-            disp("Valid Idx Obtained"), toc, tic
+            toc, disp("Valid Idx Obtained"), tic
 
         end
         %% covariates: now that we identified all the valid candidate locations, 
@@ -207,7 +224,7 @@ for rID = 397:length(label2rasterID.RASTER_ID1)
         x_swir1     = sparse(double(swir1.*valid_idx));
         x_swir2     = sparse(double(swir2.*valid_idx));
         x_nir       = sparse(double(nir.*valid_idx));
-        disp("Covariate X Prepared"), toc, tic
+        toc, disp("Covariate X Prepared"), tic
         %% ground truth class representation for global clustering
         % ROOF - common to all rIDs
         uniq_RoofMaterial =     string(data((data.Sector == sector) & ...
@@ -313,7 +330,7 @@ for rID = 397:length(label2rasterID.RASTER_ID1)
         
         end
         
-        disp("Roof Assigned"), toc, tic
+        toc, disp("Roof Assigned"), tic
     
         % encode roof material to vulnerability class
         mapping = struct;
@@ -470,7 +487,7 @@ for rID = 397:length(label2rasterID.RASTER_ID1)
                 end
             end
         end
-        disp("Wall and MacroTaxo Assigned"), toc, tic
+        toc, disp("Wall and MacroTaxo Assigned"), tic
         %% assign height class given macro-taxonomy
         height_class_assignment = strings(size(X,1),1);
         uniq_MacroTaxonomy_from_assignment = unique(macro_taxonomy_assignment);
@@ -527,7 +544,7 @@ for rID = 397:length(label2rasterID.RASTER_ID1)
             end
         
         end
-        disp("Height Assigned"), toc, tic
+        toc, disp("Height Assigned"), tic
         
         height_class_assignment_id = zeros(size(X,1),1);
         for i = 1:numel(uniq_HeightClass)
@@ -552,11 +569,7 @@ for rID = 397:length(label2rasterID.RASTER_ID1)
         y_macrotaxo(ii) = macro_taxonomy_assignment_id;
         y_wall(ii) = wall_assignment_id;
     
-        disp(rID)
-        disp(province)
-        disp(district)
-        disp(sector)
-        disp("Finished"), toc, tic
+        toc, disp("Finished"), tic
     end
 end
 
