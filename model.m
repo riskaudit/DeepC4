@@ -44,7 +44,7 @@ y_macrotaxo = zeros(size(mask));
 y_wall = zeros(size(mask));
 
 %%
-for rID = 200:length(label2rasterID.RASTER_ID1)
+for rID = 390:length(label2rasterID.RASTER_ID1)
     disp("start"), tic
 
     if rID == length(label2rasterID.RASTER_ID1)
@@ -291,6 +291,11 @@ for rID = 200:length(label2rasterID.RASTER_ID1)
         % https://uk.mathworks.com/matlabcentral/fileexchange/117355-constrained-k-means
         tau = floor(summary_RoofMaterial .* size(X,1));
 
+        if sum(tau) ~= size(X,1)
+            ttmp = find(tau == max(tau));
+            tau(ttmp) = tau(ttmp) + (size(X,1)-sum(tau));
+        end
+
         try
             rng(1,"v5normal"); 
             [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 100);
@@ -478,6 +483,11 @@ for rID = 200:length(label2rasterID.RASTER_ID1)
                 tau_XXX(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) == max(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) = 1;
                 tau_XXX(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) ~= max(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) = 0;
                 tau_XXX(isnan(tau_XXX)) = 0;
+            end
+
+            if sum(tau_XXX) ~= size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)
+                ttmp = find(tau_XXX == max(tau_XXX));
+                tau_XXX(ttmp) = tau_XXX(ttmp) + (size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)-sum(tau_XXX));
             end
             
             % this is for entries with very few rows and dimensions that lead to
