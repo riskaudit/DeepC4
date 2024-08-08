@@ -2,7 +2,7 @@
 % Representation Learning Module: Clustering Friendly Rep Learning (page 8)
 % Clustering Module: Relation Matching Deep Clustering (and Constrained Kmeans?)
 
-%% Initialize
+%% initialize
 clear, clc, close
 cd '/Users/joshuadimasaka/Desktop/PhD/GitHub/rwa'
 
@@ -48,18 +48,13 @@ DRLdata = readtable("data/BLDG/BACHOFER DLR/rID_coverage.csv", ...
 [DRLheight, ~] = readgeoraster("data/BLDG/BACHOFER DLR/EO4Kigali_2015_bheight.tif");
 [DRLbldgtype, ~] = readgeoraster("data/BLDG/BACHOFER DLR/EO4Kigali_2015_btype.tif");
 
-
-
-
-
-
-
-
-%% 
+%% initialize output maps
 y_height = zeros(size(mask));
 y_roof = zeros(size(mask));
 y_macrotaxo = zeros(size(mask));
 y_wall = zeros(size(mask));
+
+%% train 
 
 %%
 for rID = 1:length(label2rasterID.RASTER_ID1)
