@@ -1,3 +1,8 @@
+%% Simultaneous Deep Clustering
+% Representation Learning Module: Clustering Friendly Rep Learning (page 8)
+% Clustering Module: Relation Matching Deep Clustering (and Constrained Kmeans?)
+
+%% Initialize
 clear, clc, close
 cd '/Users/joshuadimasaka/Desktop/PhD/GitHub/rwa'
 
@@ -37,6 +42,19 @@ dwelling_table_fpath = "data/CENSUS 2022/dwelling_table.csv";
 clear   census_fpath macro_taxonomy_table_fpath ... 
         height_table_fpath dwelling_table_fpath
 
+%% load datasets for deep representation learning (DRL)
+DRLdata = readtable("data/BLDG/BACHOFER DLR/rID_coverage.csv", ...
+                    'VariableNamingRule', 'preserve');
+[DRLheight, ~] = readgeoraster("data/BLDG/BACHOFER DLR/EO4Kigali_2015_bheight.tif");
+[DRLbldgtype, ~] = readgeoraster("data/BLDG/BACHOFER DLR/EO4Kigali_2015_btype.tif");
+
+
+
+
+
+
+
+
 %% 
 y_height = zeros(size(mask));
 y_roof = zeros(size(mask));
@@ -44,7 +62,7 @@ y_macrotaxo = zeros(size(mask));
 y_wall = zeros(size(mask));
 
 %%
-for rID = 1:length(label2rasterIDsss.RASTER_ID1)
+for rID = 1:length(label2rasterID.RASTER_ID1)
 
     disp("start"), tic
 
@@ -111,7 +129,7 @@ for rID = 1:length(label2rasterIDsss.RASTER_ID1)
         % to address this, we can consider the average
         % area of building from bldgftprn, based on Paul's estimation
         average_area_x_bldgftprnt    =  60; %m2/bldg
-        
+
         % this is interpreted as the average arae of a building in a given grid,
         % hence, the number of pixels needed for a single building would be:
         % n_bldg_per_pixel = (m2/pixel) / (m2/bldg)
@@ -574,7 +592,7 @@ for rID = 1:length(label2rasterIDsss.RASTER_ID1)
 end
 
 %%
-geotiffwrite("output/20240731/y_height.tif",(y_height),maskR)
-geotiffwrite("output/20240731/y_roof.tif",(y_roof),maskR)
-geotiffwrite("output/20240731/y_macrotaxo.tif",(y_macrotaxo),maskR)
-geotiffwrite("output/20240731/y_wall.tif",(y_wall),maskR)
+geotiffwrite("output/20240801/y_height.tif",(y_height),maskR)
+geotiffwrite("output/20240801/y_roof.tif",(y_roof),maskR)
+geotiffwrite("output/20240801/y_macrotaxo.tif",(y_macrotaxo),maskR)
+geotiffwrite("output/20240801/y_wall.tif",(y_wall),maskR)
