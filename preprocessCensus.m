@@ -67,7 +67,7 @@ function [Q, data] = preprocessCensus(  census_fpath, ...
     for s = 1:size(data,1)
     
         % multiplier for material
-        temp = table2array(data(s,14:27));
+        temp = table2array(data(s,14:21));
         temp(isnan(temp))=0;
         temp = temp./(sum(temp,2)./100)./100;
         for g = 1:size(T_new_new,1) 

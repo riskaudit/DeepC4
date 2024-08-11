@@ -43,8 +43,17 @@ y_roof = zeros(size(mask));
 y_macrotaxo = zeros(size(mask));
 y_wall = zeros(size(mask));
 
-%%
-for rID = 1:length(label2rasterID.RASTER_ID1)
+%% 
+% rID = 403, Sanity Check 1: Case of Gatenga (sector), City of Kigali
+% rID = 412, Sanity Check 2: Case of Gitega (sector), City of Kigali
+% rID = 404, Sanity Check 3: Case of Gikondon
+% subset
+sub_label2rasterID = readtable("data/BLDG/BACHOFER DLR/rID_coverage.csv");
+
+% for rID = 1:length(label2rasterID.RASTER_ID1)
+for idx_rID = 1:length(sub_label2rasterID.RASTER_ID1)
+
+    rID = sub_label2rasterID.RASTER_ID1(idx_rID);
 
     disp("start"), tic
 
@@ -64,6 +73,7 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
             idx =   (mask == rID) & (dynLabel == 6);
         end
 
+        disp(idx_rID)
         disp(rID)
         disp(province)
         disp(district)
@@ -229,20 +239,20 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
         % ROOF - common to all rIDs
         uniq_RoofMaterial =     string(data((data.Sector == sector) & ...
                                 (data.Province == province) & ...
-                                (data.District == district), 28:36).Properties.VariableNames)';
+                                (data.District == district), 22:25).Properties.VariableNames)';
         summary_RoofMaterial =  table2array(data((data.Sector == sector) & ...
                                 (data.Province == province) & ...
-                                (data.District == district), 28:36))';
+                                (data.District == district), 22:25))';
         summary_RoofMaterial(isnan(summary_RoofMaterial)) = 0;
         summary_RoofMaterial = summary_RoofMaterial ./ sum(summary_RoofMaterial);
         
         % WALL - common to all rIDs
         uniq_WallMaterial = string(data((data.Sector == sector) & ...
                             (data.Province == province) & ...
-                            (data.District == district), 14:27).Properties.VariableNames)';
+                            (data.District == district), 14:21).Properties.VariableNames)';
         summary_WallMaterial =  table2array(data((data.Sector == sector) & ...
                                 (data.Province == province) & ...
-                                (data.District == district), 14:27))';
+                                (data.District == district), 14:21))';
         summary_WallMaterial(isnan(summary_WallMaterial)) = 0;
         summary_WallMaterial = summary_WallMaterial ./ sum(summary_WallMaterial);
         
@@ -308,34 +318,46 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
         % https://uk.mathworks.com/matlabcentral/fileexchange/117355-constrained-k-means
         tau = floor(summary_RoofMaterial .* size(X,1));
 
+        % we gotta remove this because this results in an ill-posed
+        % solution for clustering roof material
         if sum(tau) ~= size(X,1)
             ttmp = find(tau == max(tau),1);
             tau(ttmp) = tau(ttmp) + (size(X,1)-sum(tau));
         end
 
-        try
-            rng(1,"v5normal"); 
-            [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 100);
-        catch MyErr
-            [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 100);
+        % try
+        %     rng(1,"v5normal");
+        %     [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 10);
+        % catch MyErr
+        %     [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 10);
+        % end
+        % [~,score,~,~,explainedVar] = pca(X);
+        err = 1; failed = 1;
+        while err > 0.01 | failed == 1
+            try
+                [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 1000);
+                failed = 0;
+            catch MyErr
+                failed = 1;
+            end
+            if failed == 0
+                err = sum(abs((tau(tau ~= 0))'-(histcounts(labels)))) ./ sum(tau(tau ~= 0));
+            end
         end
         
         % assign roof material
         roof_assignment = strings(size(X,1),1);
         nonzero_idx_tau = find(tau ~= 0);
         for i = 1:n_class
-        
             iX = find(labels == i);
             roof_assignment(iX,:) = uniq_RoofMaterial(nonzero_idx_tau(i));
-        
         end
-        
         toc, disp("Roof Assigned"), tic
     
         % encode roof material to vulnerability class
         mapping = struct;
-        mapping.wall = data(:, 14:27).Properties.VariableNames';
-        mapping.roof = data(:, 28:36).Properties.VariableNames';
+        mapping.wall = data(:, 14:21).Properties.VariableNames';
+        mapping.roof = data(:, 22:25).Properties.VariableNames';
         mapping.wallProb = summary_WallMaterial;
         mapping.roofProb = summary_RoofMaterial;
         mapping.jointP = (mapping.wallProb * mapping.roofProb') ./ ...
@@ -374,18 +396,21 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
                 ttmp = find(tau_X == max(tau_X),1);
                 tau_X(ttmp) = tau_X(ttmp) + (size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:),1)-sum(tau_X));
             end
-    
-            try
-                rng(1,"v5normal"); 
-                [labels,centroids] = constrainedKMeans( X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:), ...
-                                                        numel(tau_X(tau_X ~= 0)), ...
-                                                        tau_X(tau_X ~= 0), ...
-                                                        100);
-            catch MyErr
-                [labels,centroids] = constrainedKMeans( X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:), ...
-                                                        numel(tau_X(tau_X ~= 0)), ...
-                                                        tau_X(tau_X ~= 0), ...
-                                                        100);
+
+            err = 1; failed = 1;
+            while err > 0.01 | failed == 1
+                try
+                    [labels,centroids] = constrainedKMeans( X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:), ...
+                                                            numel(tau_X(tau_X ~= 0)), ...
+                                                            tau_X(tau_X ~= 0), ...
+                                                            1000);
+                    failed = 0;
+                catch MyErr
+                    failed = 1;
+                end
+                if failed == 0
+                    err = sum(abs(tau_X(tau_X ~= 0)'-histcounts(labels))) ./ sum(tau_X(tau_X ~= 0));
+                end
             end
         
             % initialize
@@ -461,20 +486,22 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
                     tau_XX(ttmp) = tau_XX(ttmp) + (size(X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
                                                              roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:),1)      -sum(tau_XX));
                 end   
-    
-                try
-                    rng(1,"v5normal"); 
-                    [labels,centroids] = constrainedKMeans( X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                                                                roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:), ...
-                                                            numel(tau_XX(tau_XX ~= 0)), ...
-                                                            tau_XX(tau_XX ~= 0), ...
-                                                            100);   
-                catch MyErr
-                    [labels,centroids] = constrainedKMeans( X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                                                                roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:), ...
-                                                            numel(tau_XX(tau_XX ~= 0)), ...
-                                                            tau_XX(tau_XX ~= 0), ...
-                                                            100);   
+   
+                err = 1; failed = 1;
+                while err > 0.01 | failed == 1
+                    try
+                        [labels,centroids] = constrainedKMeans( X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                                                                    roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:), ...
+                                                                numel(tau_XX(tau_XX ~= 0)), ...
+                                                                tau_XX(tau_XX ~= 0), ...
+                                                                1000);  
+                        failed = 0;
+                    catch MyErr
+                        failed = 1;
+                    end
+                    if failed == 0
+                        err = sum(abs(tau_XX(tau_XX ~= 0)'-histcounts(labels))) ./ sum(tau_XX(tau_XX ~= 0));
+                    end
                 end
     
                 % initialize
@@ -518,21 +545,23 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
                 tau_XXX(ttmp) = tau_XXX(ttmp) + (size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)-sum(tau_XXX));
             end
             
-            % this is for entries with very few rows and dimensions that lead to
-            % computational NAN error ... doesn't happen oftentimes
-            try
-                rng(1,"v5normal"); 
-                [labels,centroids] = constrainedKMeans( X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:), ...
-                                                        numel(tau_XXX(tau_XXX ~= 0)), ...
-                                                        tau_XXX(tau_XXX ~= 0), ...
-                                                        100);
-            catch MyErr
-                [labels,centroids] = constrainedKMeans( X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:), ...
-                                                        numel(tau_XXX(tau_XXX ~= 0)), ...
-                                                        tau_XXX(tau_XXX ~= 0), ...
-                                                        100);
+
+            err = 1; failed = 1;
+            while err > 0.01 | failed == 1
+                try
+                    [labels,centroids] = constrainedKMeans( X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:), ...
+                                                            numel(tau_XXX(tau_XXX ~= 0)), ...
+                                                            tau_XXX(tau_XXX ~= 0), ...
+                                                            1000);
+                    failed = 0;
+                catch MyErr
+                    failed = 1;
+                end
+                if failed == 0
+                    err = sum(abs(tau_XXX(tau_XXX ~= 0)'-histcounts(labels))) ./ sum(tau_XXX(tau_XXX ~= 0));
+                end
             end
-        
+
             % initialize
             tmp6 = zeros(size(X,1),1);
             tmp6(tmp_idx6,1) = labels;
@@ -574,7 +603,7 @@ for rID = 1:length(label2rasterID.RASTER_ID1)
 end
 
 %%
-geotiffwrite("output/20240801/y_height.tif",(y_height),maskR)
-geotiffwrite("output/20240801/y_roof.tif",(y_roof),maskR)
-geotiffwrite("output/20240801/y_macrotaxo.tif",(y_macrotaxo),maskR)
-geotiffwrite("output/20240801/y_wall.tif",(y_wall),maskR)
+geotiffwrite("output/20240811_33sectors/y_height.tif",(y_height),maskR)
+geotiffwrite("output/20240811_33sectors/y_roof.tif",(y_roof),maskR)
+geotiffwrite("output/20240811_33sectors/y_macrotaxo.tif",(y_macrotaxo),maskR)
+geotiffwrite("output/20240811_33sectors/y_wall.tif",(y_wall),maskR)

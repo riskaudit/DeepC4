@@ -48,6 +48,7 @@ end
 iter = 1; % Used to ensure that we not exceed maxiter iterations. 
 
 while iter<maxiter  
+    % iter
     
     % Below is our objective function. By default, this script uses 
     objectiveFunction = reshape(0.5*pdist2(X, centroids).^2, [n*K,1]); % Squared Euclidean distance between data points and centroids, vectorized
@@ -81,9 +82,13 @@ while iter<maxiter
     % Compare centroids from prior iteration and current iteration. 
     % The following condition will be true if labels do not change across
     % an iteration. We stop in this case and output the current labels.
-    if sum(diag(pdist2(centroids, centroidsNew)) == zeros(K,1)) == 2 % True if centroids do not change. 
+    % diag(pdist2(centroids, centroidsNew)) 
+    % % - this is a good metric for
+    % evaluation for publication or paper
+    if sum(diag(pdist2(centroids, centroidsNew)) == zeros(K,1)) == K % 2 % True if centroids do not change. 
         labels = labelsNew;
         centroids = centroidsNew;
+        iter % show final iter
         break
     else
         % Take current centroids and move to next iteration.
