@@ -1,7 +1,7 @@
-function [loss2,loss3,loss4,xTPprop,xPre,xRec,xAccu,xF1, ...
-    consistencyLocalGlobal,gradientsE,gradientsD] = modelLoss(netE,netD,X,...
-    summary_RoofMaterial,n_class,sub_label_roof,ind,...
-    loss2_prev,loss3_prev,loss4_prev)
+function [loss2,loss3,xTPprop,xPre,xRec,xAccu,xF1, ...
+    gradientsE,gradientsD] = modelLoss(netE,netD,X,...
+    tau,n_class,sub_label_roof,ind,...
+    loss2_prev,loss3_prev)
 
     % Forward through encoder.
     % [Z,mu,logSigmaSq] = forward(netE,X);
@@ -11,18 +11,13 @@ function [loss2,loss3,loss4,xTPprop,xPre,xRec,xAccu,xF1, ...
     Y = forward(netD,Z);
 
     % Input supervision
-    temp = full(sub_label_roof(ind));
+    temp = sub_label_roof;
     indtemp = find(temp>0 & temp<=7);
-    subtemp = temp(indtemp);
+    subtemp = full(temp(indtemp));
     nsubtemp = histcounts(subtemp)';
     subZ = Z(:,indtemp);
 
     % Supervision constraints
-    tau = floor(summary_RoofMaterial .* size(Z,2));
-    if sum(tau) ~= size(Z,2)
-        ttmp = find(tau == max(tau),1);
-        tau(ttmp) = tau(ttmp) + (size(Z,2)-sum(tau));
-    end
     constraints_array = tau;
 
     % Assign maximum allowable to get minimum constraints
@@ -47,7 +42,8 @@ function [loss2,loss3,loss4,xTPprop,xPre,xRec,xAccu,xF1, ...
     end
     constraints_array(:,3) =    constraints_array(:,1).*(constraints_array(:,1)<=constraints_array(:,2)) + ...
                                 constraints_array(:,2).*(constraints_array(:,1)>constraints_array(:,2));
-    constraints_array(:,4) =    constraints_array(:,3) - (sum(constraints_array(:,3))-length(subZ));
+    constraints_array(:,4) =    constraints_array(:,3) ...
+                                - ceil((sum(constraints_array(:,3))-length(subZ)).*constraints_array(:,3)./sum(constraints_array(:,3)));
     constraints_array(constraints_array(:,4)<=0,4)=0;
 
     % Perform clustering part 1 - a local for supervised.
@@ -124,87 +120,87 @@ function [loss2,loss3,loss4,xTPprop,xPre,xRec,xAccu,xF1, ...
 
     % Perform clustering part 2 - the local learning we have from part 1 must be
     % consistent with the global results (when applied)
-    failed = 1;
-    while failed == 1
-        try
-            [labelsGlobal,centroidsGlobal] = constrainedKMeans_DEC(Z, ...
-                n_class, tau(tau ~= 0), 1000);
-            failed = 0;
-        catch MyErr
-            failed = 1;
-        end
-        % if failed == 0
-        %     err = sum(abs((tau(tau ~= 0))'-(histcounts(labelsGlobal)))) ...
-        %         ./ sum(tau(tau ~= 0));
-        % end
-    end
-    % Loss based on Consistencu
-    centroidsGlobalforLocal = centroidsGlobal(:,:,constraints_array(:,3)>0);
-    distance_error_arrayGlobal = sqrt((centroidsGlobalforLocal-subZ).^2);
-    loss4_basedOnGlobalLocalConsistency = 0;
-    for i = 1:length(nsubtemp)
-        if      i == 1
-                if nsubtemp(i) ~= 0
-                    col = [1 4];
-                    [common_index,~]=intersect(col,identified_classes_index);
-                    loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
-                        mean(sum((subtemp==i)' .* ...
-                        mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i));
-                end
-        elseif  i == 2
-                if nsubtemp(i) ~= 0 
-                    col = [1];
-                    [common_index,~]=intersect(col,identified_classes_index);
-                    loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
-                        sum((subtemp==i)' .* ...
-                        mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i);
-                end
-        elseif  i == 3
-                if nsubtemp(i) ~= 0 
-                    col = [1 2];
-                    [common_index,~]=intersect(col,identified_classes_index);
-                    loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
-                        mean(sum((subtemp==i)' .* ...
-                        mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i));
-                end
-        elseif  i == 4
-                if nsubtemp(i) ~= 0 
-                    col = [1 2];
-                    [common_index,~]=intersect(col,identified_classes_index);
-                    loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
-                        mean(sum((subtemp==i)' .* ...
-                        mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i));
-                end
-        elseif  i == 5
-                if nsubtemp(i) ~= 0 
-                    col = [2];
-                    [common_index,~]=intersect(col,identified_classes_index);
-                    loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
-                        sum((subtemp==i)' .* ...
-                        mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i);
-                end
-        elseif  i == 6
-                if nsubtemp(i) ~= 0 
-                    col = [3];
-                    [common_index,~]=intersect(col,identified_classes_index);
-                    loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
-                        sum((subtemp==i)' .* ...
-                        mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i);
-                end
-        elseif  i == 7
-                if nsubtemp(i) ~= 0 
-                    col = [1];
-                    [common_index,~]=intersect(col,identified_classes_index);
-                    loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
-                        sum((subtemp==i)' .* ...
-                        mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i);
-                end
-        end
-    end
-    loss4 = loss4_basedOnGlobalLocalConsistency;
-
-    % Metric
-    consistencyLocalGlobal = sum(labelsLocal == labelsGlobal(indtemp))./length(indtemp);
+    % failed = 1;
+    % while failed == 1
+    %     try
+    %         [labelsGlobal,centroidsGlobal] = constrainedKMeans_DEC(Z, ...
+    %             n_class, tau(tau ~= 0), 1000);
+    %         failed = 0;
+    %     catch MyErr
+    %         failed = 1;
+    %     end
+    %     % if failed == 0
+    %     %     err = sum(abs((tau(tau ~= 0))'-(histcounts(labelsGlobal)))) ...
+    %     %         ./ sum(tau(tau ~= 0));
+    %     % end
+    % end
+    % % Loss based on Consistencu
+    % centroidsGlobalforLocal = centroidsGlobal(:,:,constraints_array(:,3)>0);
+    % distance_error_arrayGlobal = sqrt((centroidsGlobalforLocal-subZ).^2);
+    % loss4_basedOnGlobalLocalConsistency = 0;
+    % for i = 1:length(nsubtemp)
+    %     if      i == 1
+    %             if nsubtemp(i) ~= 0
+    %                 col = [1 4];
+    %                 [common_index,~]=intersect(col,identified_classes_index);
+    %                 loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
+    %                     mean(sum((subtemp==i)' .* ...
+    %                     mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i));
+    %             end
+    %     elseif  i == 2
+    %             if nsubtemp(i) ~= 0 
+    %                 col = [1];
+    %                 [common_index,~]=intersect(col,identified_classes_index);
+    %                 loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
+    %                     sum((subtemp==i)' .* ...
+    %                     mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i);
+    %             end
+    %     elseif  i == 3
+    %             if nsubtemp(i) ~= 0 
+    %                 col = [1 2];
+    %                 [common_index,~]=intersect(col,identified_classes_index);
+    %                 loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
+    %                     mean(sum((subtemp==i)' .* ...
+    %                     mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i));
+    %             end
+    %     elseif  i == 4
+    %             if nsubtemp(i) ~= 0 
+    %                 col = [1 2];
+    %                 [common_index,~]=intersect(col,identified_classes_index);
+    %                 loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
+    %                     mean(sum((subtemp==i)' .* ...
+    %                     mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i));
+    %             end
+    %     elseif  i == 5
+    %             if nsubtemp(i) ~= 0 
+    %                 col = [2];
+    %                 [common_index,~]=intersect(col,identified_classes_index);
+    %                 loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
+    %                     sum((subtemp==i)' .* ...
+    %                     mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i);
+    %             end
+    %     elseif  i == 6
+    %             if nsubtemp(i) ~= 0 
+    %                 col = [3];
+    %                 [common_index,~]=intersect(col,identified_classes_index);
+    %                 loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
+    %                     sum((subtemp==i)' .* ...
+    %                     mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i);
+    %             end
+    %     elseif  i == 7
+    %             if nsubtemp(i) ~= 0 
+    %                 col = [1];
+    %                 [common_index,~]=intersect(col,identified_classes_index);
+    %                 loss4_basedOnGlobalLocalConsistency = loss4_basedOnGlobalLocalConsistency + ...
+    %                     sum((subtemp==i)' .* ...
+    %                     mean(abs(distance_error_arrayGlobal(:,:,common_index)-distance_error_array(:,:,common_index)),1))./nsubtemp(i);
+    %             end
+    %     end
+    % end
+    % loss4 = loss4_basedOnGlobalLocalConsistency;
+    % 
+    % % Metric
+    % consistencyLocalGlobal = sum(labelsLocal == labelsGlobal(indtemp))./length(indtemp);
 
     % Cluster Loss
     % qij = zeros(size(Z,2), n_class);
@@ -360,7 +356,7 @@ function [loss2,loss3,loss4,xTPprop,xPre,xRec,xAccu,xF1, ...
     % loss3 = sum(weighted_loss_ind.*nsubtemp./sum(nsubtemp));
 
     % loss = loss1 + loss2 + loss3;
-    loss = loss2./loss2_prev+loss3./loss3_prev+loss4./loss4_prev;
+    loss = loss2./loss2_prev+loss3./loss3_prev;
     % loss = loss2./loss2_prev+loss3./loss3_prev+loss4./loss4_prev;
     [gradientsE,gradientsD] = ...
         dlgradient(dlarray(loss,'BC'),netE.Learnables,netD.Learnables);

@@ -53,10 +53,15 @@ y_wall = zeros(size(mask));
 % subset
 sub_label2rasterID = readtable("data/BLDG/BACHOFER DLR/rID_coverage.csv");
 
-% for rID = 1:length(label2rasterID.RASTER_ID1)
-for idx_rID = 1:1 %1:length(sub_label2rasterID.RASTER_ID1)
+X = [];
+row = [];
+col = [];
+ind = [];
+tau = zeros(4,1);
 
-    rID = 411; % sub_label2rasterID.RASTER_ID1(idx_rID);
+for idx_rID = 1:length(sub_label2rasterID.RASTER_ID1)
+
+    rID = sub_label2rasterID.RASTER_ID1(idx_rID);
 
     disp("start"), tic
 
@@ -237,58 +242,8 @@ for idx_rID = 1:1 %1:length(sub_label2rasterID.RASTER_ID1)
         x_swir1     = sparse(double(swir1.*valid_idx));
         x_swir2     = sparse(double(swir2.*valid_idx));
         x_nir       = sparse(double(nir.*valid_idx));
-        sub_label_roof  = sparse(double(btype_label.*valid_idx));
         toc, disp("Covariate X Prepared"), tic
-        %% ground truth class representation for global clustering
-        % ROOF - common to all rIDs
-        uniq_RoofMaterial =     string(data((data.Sector == sector) & ...
-                                (data.Province == province) & ...
-                                (data.District == district), 22:25).Properties.VariableNames)';
-        summary_RoofMaterial =  table2array(data((data.Sector == sector) & ...
-                                (data.Province == province) & ...
-                                (data.District == district), 22:25))';
-        summary_RoofMaterial(isnan(summary_RoofMaterial)) = 0;
-        summary_RoofMaterial = summary_RoofMaterial ./ sum(summary_RoofMaterial);
-        
-        % WALL - common to all rIDs
-        uniq_WallMaterial = string(data((data.Sector == sector) & ...
-                            (data.Province == province) & ...
-                            (data.District == district), 14:21).Properties.VariableNames)';
-        summary_WallMaterial =  table2array(data((data.Sector == sector) & ...
-                                (data.Province == province) & ...
-                                (data.District == district), 14:21))';
-        summary_WallMaterial(isnan(summary_WallMaterial)) = 0;
-        summary_WallMaterial = summary_WallMaterial ./ sum(summary_WallMaterial);
-        
-        % MACROTAXONOMY 
-        uniq_MacroTaxonomy = unique(Q.MacroTaxonomy);
-        jointProb_MacroTaxonomyANDWallMaterial = zeros( numel(uniq_MacroTaxonomy), ...
-                                                        numel(uniq_WallMaterial));
-        for i = 1:numel(uniq_WallMaterial)
-            for j = 1:numel(uniq_MacroTaxonomy)
-                jointProb_MacroTaxonomyANDWallMaterial(j,i) = ...
-                    sum(nQ.numBuilding( (string(nQ.MacroTaxonomy) == uniq_MacroTaxonomy(j)) & ...
-                                        (string(nQ.Material) == uniq_WallMaterial(i))   ));
-            end
-        end
-        jointProb_MacroTaxonomyANDWallMaterial = jointProb_MacroTaxonomyANDWallMaterial ./ ...
-                            sum(jointProb_MacroTaxonomyANDWallMaterial, 'all');
-        
-        
-        % HEIGHT - that is unique to given rID
-        uniq_HeightClass = unique(Q.HeightClass);
-        jointProb_HeightClassANDMacroTaxonomy = zeros(  numel(uniq_HeightClass), ...
-                                                        numel(uniq_MacroTaxonomy));
-        for i = 1:numel(uniq_MacroTaxonomy)
-            for j = 1:numel(uniq_HeightClass)
-                jointProb_HeightClassANDMacroTaxonomy(j,i) = ...
-                    sum(nQ.numBuilding( (string(nQ.HeightClass) == uniq_HeightClass(j)) & ...
-                                        (string(nQ.MacroTaxonomy) == uniq_MacroTaxonomy(i))   ));
-            end
-        end
-        jointProb_HeightClassANDMacroTaxonomy = jointProb_HeightClassANDMacroTaxonomy ./ ...
-                            sum(jointProb_HeightClassANDMacroTaxonomy, 'all');
-        
+
         %% model: label-agnostic training
         % we know that some of the EO bands indicate height or roof material
         % possibly jointly. we could say that the wall material is not visible to
@@ -296,10 +251,11 @@ for idx_rID = 1:1 %1:length(sub_label2rasterID.RASTER_ID1)
         % leverage the roof material census instead and wall height as the joint
         % labels, and then we'll post-process it with our encoded belief on the
         % relationship between roof material, wall material, and height class.
-        n_class = sum(summary_RoofMaterial > 1e-5);
-        [row,col] = find(x_s1vv>0); % incorporate spatial element
-        ind = find(x_s1vv>0);
-        X = full([  ...
+        [rowS,colS] = find(x_s1vv>0); % incorporate spatial element
+        row = [row; rowS];
+        col = [col; colS];
+        ind = [ind; find(x_s1vv>0)];
+        X = [X; full([  ...
                     normalize(log(x_s1vv(x_s1vv>0))) ...
                     normalize(log(x_s1vh(x_s1vh>0))) ...
                     normalize(log(x_r(x_r>0))) ...
@@ -312,451 +268,502 @@ for idx_rID = 1:1 %1:length(sub_label2rasterID.RASTER_ID1)
                     normalize(log(x_swir1(x_swir1>0))) ...
                     normalize(log(x_swir2(x_swir2>0))) ...
                     normalize(log(x_nir(x_nir>0))) ...
-                    normalize(row) ...
-                    normalize(col) ...
+                    normalize(rowS) ...
+                    normalize(colS) ...
                     ...
-                    ]);
+                    ])];
+
+
+        %% ground truth class representation for global clustering
+        % ROOF - common to all rIDs
+        uniq_RoofMaterial =     string(data((data.Sector == sector) & ...
+                                (data.Province == province) & ...
+                                (data.District == district), 22:25).Properties.VariableNames)';
+        summary_RoofMaterial =  table2array(data((data.Sector == sector) & ...
+                                (data.Province == province) & ...
+                                (data.District == district), 22:25))';
+        summary_RoofMaterial(isnan(summary_RoofMaterial)) = 0;
+        summary_RoofMaterial = summary_RoofMaterial ./ sum(summary_RoofMaterial);
+        tauS = floor(summary_RoofMaterial .* length(find(x_s1vv>0)));
+        if sum(tauS) ~= length(find(x_s1vv>0))
+            ttmp = find(tauS == max(tauS),1);
+            tauS(ttmp) = tauS(ttmp) + (length(find(x_s1vv>0))-sum(tauS));
+        end
+        tau = tau + tauS;
+        n_class = sum(tau > 1e-5);
+
+    end
+end
         
-        %% DR
+% WALL - common to all rIDs
+% uniq_WallMaterial = string(data((data.Sector == sector) & ...
+%                     (data.Province == province) & ...
+%                     (data.District == district), 14:21).Properties.VariableNames)';
+% summary_WallMaterial =  table2array(data((data.Sector == sector) & ...
+%                         (data.Province == province) & ...
+%                         (data.District == district), 14:21))';
+% summary_WallMaterial(isnan(summary_WallMaterial)) = 0;
+% summary_WallMaterial = summary_WallMaterial ./ sum(summary_WallMaterial);
+% 
+% % MACROTAXONOMY 
+% uniq_MacroTaxonomy = unique(Q.MacroTaxonomy);
+% jointProb_MacroTaxonomyANDWallMaterial = zeros( numel(uniq_MacroTaxonomy), ...
+%                                                 numel(uniq_WallMaterial));
+% for i = 1:numel(uniq_WallMaterial)
+%     for j = 1:numel(uniq_MacroTaxonomy)
+%         jointProb_MacroTaxonomyANDWallMaterial(j,i) = ...
+%             sum(nQ.numBuilding( (string(nQ.MacroTaxonomy) == uniq_MacroTaxonomy(j)) & ...
+%                                 (string(nQ.Material) == uniq_WallMaterial(i))   ));
+%     end
+% end
+% jointProb_MacroTaxonomyANDWallMaterial = jointProb_MacroTaxonomyANDWallMaterial ./ ...
+%                     sum(jointProb_MacroTaxonomyANDWallMaterial, 'all');
+% 
+% 
+% % HEIGHT - that is unique to given rID
+% uniq_HeightClass = unique(Q.HeightClass);
+% jointProb_HeightClassANDMacroTaxonomy = zeros(  numel(uniq_HeightClass), ...
+%                                                 numel(uniq_MacroTaxonomy));
+% for i = 1:numel(uniq_MacroTaxonomy)
+%     for j = 1:numel(uniq_HeightClass)
+%         jointProb_HeightClassANDMacroTaxonomy(j,i) = ...
+%             sum(nQ.numBuilding( (string(nQ.HeightClass) == uniq_HeightClass(j)) & ...
+%                                 (string(nQ.MacroTaxonomy) == uniq_MacroTaxonomy(i))   ));
+%     end
+% end
+% jointProb_HeightClassANDMacroTaxonomy = jointProb_HeightClassANDMacroTaxonomy ./ ...
+%                     sum(jointProb_HeightClassANDMacroTaxonomy, 'all');
 
-        % PCA - linear, can be probabilistic using PPCA
-        % [~,score,~,~,explainedVar] = pca(X);
-        % sum_explainedVar = 0;
-        % for i = 1:length(explainedVar)
-        %     if sum(explainedVar(1:i,1)) >= 90
-        %         break
-        %     end
-        % end
-        % X = score(:,1:i);
+%% DR
 
-        % tSNE - nonlinear
-        % [Y,loss] = tsne(X, "Distance","euclidean");
-        % X = Y;
+% PCA - linear, can be probabilistic using PPCA
+% [~,score,~,~,explainedVar] = pca(X);
+% sum_explainedVar = 0;
+% for i = 1:length(explainedVar)
+%     if sum(explainedVar(1:i,1)) >= 90
+%         break
+%     end
+% end
+% X = score(:,1:i);
 
-        % tau = floor(summary_RoofMaterial .* size(X,1));
-        % if sum(tau) ~= size(X,1)
-        %     ttmp = find(tau == max(tau),1);
-        %     tau(ttmp) = tau(ttmp) + (size(X,1)-sum(tau));
-        % end
-        % err = 1; failed = 1;
-        % while err > 0.01 | failed == 1
-        %     try
-        %         [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 1000);
-        %         failed = 0;
-        %     catch MyErr
-        %         failed = 1;
-        %     end
-        %     if failed == 0
-        %         err = sum(abs((tau(tau ~= 0))'-(histcounts(labels)))) ./ sum(tau(tau ~= 0));
-        %     end
-        % end
+% tSNE - nonlinear
+% [Y,loss] = tsne(X, "Distance","euclidean");
+% X = Y;
 
-
-        %% autoencoder - deep & nonlinear, probabilistic via variational,
-        % image-applicable via convolutional, 
-
-        numFeatures = size(X,2);
-        hiddenSize = 8;
-        numLatentChannels = 1;
-
-        % layersE = [
-        %     featureInputLayer(numFeatures) %12
-        %     fullyConnectedLayer(hiddenSize) %10
-        %     layerNormalizationLayer %10
-        %     reluLayer %10
-        %     fullyConnectedLayer(2*numLatentChannels) %10
-        %     samplingLayer]; %5
-
-        layersE = [
-            featureInputLayer(numFeatures) %12
-            fullyConnectedLayer(hiddenSize) %10
-            layerNormalizationLayer %10
-            reluLayer %10
-            fullyConnectedLayer(numLatentChannels)
-            sigmoidLayer]; %5
-
-        layersD = [
-            featureInputLayer(numLatentChannels) %5
-            fullyConnectedLayer(hiddenSize) %10
-            reluLayer %10
-            fullyConnectedLayer(12)  %12
-            reluLayer %12
-            fullyConnectedLayer(numFeatures)];
+% tau = floor(summary_RoofMaterial .* size(X,1));
+% if sum(tau) ~= size(X,1)
+%     ttmp = find(tau == max(tau),1);
+%     tau(ttmp) = tau(ttmp) + (size(X,1)-sum(tau));
+% end
+% err = 1; failed = 1;
+% while err > 0.01 | failed == 1
+%     try
+%         [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 1000);
+%         failed = 0;
+%     catch MyErr
+%         failed = 1;
+%     end
+%     if failed == 0
+%         err = sum(abs((tau(tau ~= 0))'-(histcounts(labels)))) ./ sum(tau(tau ~= 0));
+%     end
+% end
 
 
-        netE = dlnetwork(layersE);
-        netD = dlnetwork(layersD);
+%% autoencoder - deep & nonlinear, probabilistic via variational,
+% image-applicable via convolutional, 
+sub_label_roof  = sparse(double(btype_label(ind)));
+numFeatures = size(X,2);
+hiddenSize = 8;
+numLatentChannels = 1;
 
-        numEpochs = 500;
-        learnRate = 1e-3;
-        regularization = 0.05;
+% layersE = [
+%     featureInputLayer(numFeatures) %12
+%     fullyConnectedLayer(hiddenSize) %10
+%     layerNormalizationLayer %10
+%     reluLayer %10
+%     fullyConnectedLayer(2*numLatentChannels) %10
+%     samplingLayer]; %5
 
-        trailingAvgE = [];
-        trailingAvgSqE = [];
-        trailingAvgD = [];
-        trailingAvgSqD = [];
+layersE = [
+    featureInputLayer(numFeatures) %12
+    fullyConnectedLayer(hiddenSize) %10
+    layerNormalizationLayer %10
+    reluLayer %10
+    fullyConnectedLayer(numLatentChannels)]; %5
 
-        % applicable only for minibatch setting
-        % numObservationsTrain = size(X,1);
-        % miniBatchSize = 1; 
-        % numIterationsPerEpoch = ceil(numObservationsTrain / miniBatchSize);
-        % numIterations = numEpochs * numIterationsPerEpoch;
+layersD = [
+    featureInputLayer(numLatentChannels) %5
+    fullyConnectedLayer(hiddenSize) %10
+    reluLayer %10
+    fullyConnectedLayer(12)  %12
+    reluLayer %12
+    fullyConnectedLayer(numFeatures)];
 
-        monitor = trainingProgressMonitor;
-        % monitor.Info = ["ClusteringLoss","VariationalAndReconstructionLoss","PredictionLoss","Epoch"];
-        % monitor.Metrics = ["ClusteringLoss","VariationalAndReconstructionLoss","PredictionLoss"];
-        monitor.Info = ["ReconstructionLoss","PredictionLoss","GlobalLocalLoss","Epoch"];
-        monitor.Metrics = ["ReconstructionLoss","PredictionLoss","GlobalLocalLoss",...
-            "TPprop","GLConsistency","Precision","Recall","Accuracy","F1Score"];
-        monitor.XLabel = "Epoch";
-        % groupSubPlot(monitor,"ClusteringLoss","ClusteringLoss");
-        groupSubPlot(monitor,"ReconstructionLoss","ReconstructionLoss");
-        groupSubPlot(monitor,"PredictionLoss","PredictionLoss");
-        groupSubPlot(monitor,"GlobalLocalLoss","GlobalLocalLoss");
-        groupSubPlot(monitor,"TPprop","TPprop");
-        groupSubPlot(monitor,"GLConsistency","GLConsistency");
-        groupSubPlot(monitor,"Precision","Precision");
-        groupSubPlot(monitor,"Recall","Recall");
-        groupSubPlot(monitor,"Accuracy","Accuracy");
-        groupSubPlot(monitor,"F1Score","F1Score");
-        X = dlarray(X, 'BC');
 
-        % Loop over epochs.
-        epoch = 0;  
-        while epoch < numEpochs && ~monitor.Stop
-            epoch = epoch + 1
+netE = dlnetwork(layersE);
+netD = dlnetwork(layersD);
 
-            % Evaluate loss and gradients.
-            if epoch == 1
-                loss2_prev = 1;
-                loss3_prev = 1;
-                loss4_prev = 1;
+numEpochs = 500;
+learnRate = 1e-3;
+regularization = 0.05;
+
+trailingAvgE = [];
+trailingAvgSqE = [];
+trailingAvgD = [];
+trailingAvgSqD = [];
+
+% applicable only for minibatch setting
+% numObservationsTrain = size(X,1);
+% miniBatchSize = 1; tau
+% numIterationsPerEpoch = ceil(numObservationsTrain / miniBatchSize);
+% numIterations = numEpochs * numIterationsPerEpoch;
+
+monitor = trainingProgressMonitor;
+% monitor.Info = ["ClusteringLoss","VariationalAndReconstructionLoss","PredictionLoss","Epoch"];
+% monitor.Metrics = ["ClusteringLoss","VariationalAndReconstructionLoss","PredictionLoss"];
+monitor.Info = ["ReconstructionLoss","PredictionLoss","Epoch"];
+monitor.Metrics = ["ReconstructionLoss","PredictionLoss",...
+    "TPprop","Precision","Recall","Accuracy","F1Score"];
+monitor.XLabel = "Epoch";
+% groupSubPlot(monitor,"ClusteringLoss","ClusteringLoss");
+groupSubPlot(monitor,"ReconstructionLoss","ReconstructionLoss");
+groupSubPlot(monitor,"PredictionLoss","PredictionLoss");
+groupSubPlot(monitor,"TPprop","TPprop");
+groupSubPlot(monitor,"Precision","Precision");
+groupSubPlot(monitor,"Recall","Recall");
+groupSubPlot(monitor,"Accuracy","Accuracy");
+groupSubPlot(monitor,"F1Score","F1Score");
+XDL = dlarray(X, 'BC');
+
+% Loop over epochs.
+epoch = 0;  
+while epoch < numEpochs && ~monitor.Stop
+    epoch = epoch + 1
+
+    % Evaluate loss and gradients.
+    if epoch == 1
+        loss2_prev = 1;
+        loss3_prev = 1;
+        % loss4_prev = 1;
+    end
+    [loss2,loss3,...
+        xTPprop,xPre,xRec,xAccu,xF1,...
+        gradientsE,gradientsD] = ...
+        dlfeval(@modelLoss, netE,netD,XDL, ...
+                tau,n_class,sub_label_roof,ind, ...
+                loss2_prev, loss3_prev);
+    loss2_prev = loss2;
+    loss3_prev = loss3;
+    % loss4_prev = loss4;
+
+    % Update learnable parameters.
+    [netE,trailingAvgE,trailingAvgSqE] = adamupdate(netE, ...
+        gradientsE,trailingAvgE,trailingAvgSqE,epoch,learnRate);
+
+    [netD, trailingAvgD, trailingAvgSqD] = adamupdate(netD, ...
+        gradientsD,trailingAvgD,trailingAvgSqD,epoch,learnRate);
+
+    % Update the training progress monitor. 
+    % recordMetrics(monitor,epoch, ...
+    % ClusteringLoss=loss1, ...
+    % VariationalAndReconstructionLoss=loss2, ...
+    % PredictionLoss=loss3);
+    % recordMetrics(monitor,epoch, ...
+    % VariationalAndReconstructionLoss=loss2, ...
+    % PredictionLoss=loss3, ...
+    % TPprop = xTPprop, ...
+    % Precision = xPre, ...
+    % Recall = xRec, ...
+    % Accuracy = xAccu, ...
+    % F1Score = xF1);
+    recordMetrics(monitor,epoch, ...
+    ReconstructionLoss=loss2, ...
+    PredictionLoss=loss3, ...
+    TPprop=xTPprop, ...
+    Precision = xPre, ...
+    Recall = xRec, ...
+    Accuracy = xAccu, ...
+    F1Score = xF1);
+end
+
+% Predict
+[Z,mu,logSigmaSq] = forward(netE,X);
+% Perform clustering.
+tau = floor(summary_RoofMaterial .* size(Z,2));
+if sum(tau) ~= size(Z,2)
+    ttmp = find(tau == max(tau),1);
+    tau(ttmp) = tau(ttmp) + (size(Z,2)-sum(tau));
+end
+err = 1; failed = 1;
+while err > 0.01 | failed == 1
+    try
+        [labels,centroids] = constrainedKMeans(double(extractdata(Z)'), ...
+            n_class, tau(tau ~= 0), 1000);
+        failed = 0;
+    catch MyErr
+        failed = 1;
+    end
+    if failed == 0
+        err = sum(abs((tau(tau ~= 0))'-(histcounts(labels)))) ...
+            ./ sum(tau(tau ~= 0));
+    end
+end
+
+
+% assign roof material
+roof_assignment = strings(size(X,1),1);
+nonzero_idx_tau = find(tau ~= 0);
+for i = 1:n_class
+    iX = find(labels == i);
+    roof_assignment(iX,:) = uniq_RoofMaterial(nonzero_idx_tau(i));
+end
+toc, disp("Roof Assigned"), tic
+
+% encode roof material to vulnerability class
+mapping = struct;
+mapping.wall = data(:, 14:21).Properties.VariableNames';
+mapping.roof = data(:, 22:25).Properties.VariableNames';
+mapping.wallProb = summary_WallMaterial;
+mapping.roofProb = summary_RoofMaterial;
+mapping.jointP = (mapping.wallProb * mapping.roofProb') ./ ...
+            sum((mapping.wallProb * mapping.roofProb'), 'all');
+
+%% constrained conditional clustering 
+wall_assignment = strings(size(X,1),1);
+macro_taxonomy_assignment = strings(size(X,1),1);
+for i = 1:n_class % per roof category
+
+    %% assign wall material
+    tmp_idx = find(uniq_RoofMaterial == uniq_RoofMaterial(nonzero_idx_tau(i))   );
+    tau_X = floor(sum(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))) * ...
+            mapping.jointP(:,tmp_idx) ./ sum(mapping.jointP(:,tmp_idx)) );
+    tau_X(isnan(tau_X)) = 0;
+    if size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))),1) < sum(tau_X(tau_X ~= 0))
+        tau_X = tau_X - (tau_X == max(tau_X)) .* ...
+        (sum(tau_X(tau_X ~= 0)) - size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))),1));
+    elseif size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))),1) == 1
+        temporary = sum(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))) * ...
+            mapping.jointP(:,tmp_idx) ./ sum(mapping.jointP(:,tmp_idx));
+        tau_X(temporary == max(temporary)) = 1;
+        tau_X(temporary ~= max(temporary)) = 0;
+        tau_X(isnan(tau_X)) = 0;
+    elseif numel(tau_X(tau_X ~= 0)) == 0
+        nelem = size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))),1);
+        tempelem = sum(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))) * ...
+                mapping.jointP(:,tmp_idx) ./ sum(mapping.jointP(:,tmp_idx));
+        maxelem = maxk(tempelem, nelem);
+        for g = 1:nelem
+            tau_X(tempelem == maxelem(g)) = 1;
+        end
+    end
+
+    if sum(tau_X) ~= size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:),1)
+        ttmp = find(tau_X == max(tau_X),1);
+        tau_X(ttmp) = tau_X(ttmp) + (size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:),1)-sum(tau_X));
+    end
+
+    err = 1; failed = 1;
+    while err > 0.01 | failed == 1
+        try
+            [labels,centroids] = constrainedKMeans( X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:), ...
+                                                    numel(tau_X(tau_X ~= 0)), ...
+                                                    tau_X(tau_X ~= 0), ...
+                                                    1000);
+            failed = 0;
+        catch MyErr
+            failed = 1;
+        end
+        if failed == 0
+            err = sum(abs(tau_X(tau_X ~= 0)'-histcounts(labels))) ./ sum(tau_X(tau_X ~= 0));
+        end
+    end
+
+    % initialize
+    tmp_idx2 = find(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) );
+    tmp2 = zeros(size(X,1),1);
+    tmp2(tmp_idx2,1) = labels;
+    nonzero_idx_tau_X = find(tau_X ~= 0);
+
+    for j = 1:numel(nonzero_idx_tau_X) % per wall category
+        wall_assignment(tmp2==j,1) = string(mapping.wall(nonzero_idx_tau_X(j),1));
+
+        %% assign macro-taxonomy given wall material
+        % unlike others, we'll use the settlement type ratio from nQ
+        % because it has some consideration on the dwelling ratio that we
+        % couldn't compute given our approach where our multi-staged
+        % clustering has the "dwelling" towards the end (which was
+        % considered during the estimation of pixels-to-building ratio). I
+        % guess our approach here is more on surface orthogonal projection
+        % of building floor area rather than accounting for the
+        % population-to-dwelling-ratio complexity which can give some
+        % uncertainty. If we just consider the ground floor area of a
+        % building which is common to all dwelling types, we preserve the
+        % building count statistics and not affected by the
+        % popoulation-induced variation in the dwelling-to-building-count
+        % ratios. This was what GEM used and that might be something we've
+        % uniquely addressed here. But, I would still argue that we benefit
+        % from the GEM outout somehow because we incorporated their results
+        % to how we got a set of urban-rural ratios from their resulting
+        % nQ or Q table here. Another difference we have compared with GEM
+        % is the way we spatially disaggregate. Just to note, we just rely
+        % on their ratio calculation, not on the use of WorldPop.
+        tmp_idx3 = find(uniq_WallMaterial == string(mapping.wall(nonzero_idx_tau_X(j),1)));
+        tmp_idx4 = find(wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                        roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) );
+
+        tau_XX = round(    numel(tmp_idx4) * ...
+                    jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3) ./ ...
+                    sum(jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3))) ;
+        tau_XX(isnan(tau_XX)) = 0;
+        if size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                    roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1) < sum(tau_XX(tau_XX ~= 0))
+            tau_XX = tau_XX - (tau_XX == max(tau_XX)) .* ...
+            (sum(tau_XX(tau_XX ~= 0)) - ...
+            size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                    roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1));
+        end
+        if numel(tau_XX(tau_XX ~= 0)) == 0 && size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                    roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1) == 1
+            nelem = size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                    roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1);
+            tempelem = numel(tmp_idx4) * ...
+                    jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3) ./ ...
+                    sum(jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3));
+            maxelem = maxk(tempelem, nelem);
+            idxelem = find(tempelem == maxelem);
+            for g = 1:nelem
+                tau_XX(idxelem(g)) = 1;
             end
-            [loss2,loss3,loss4,...
-                xTPprop,xPre,xRec,xAccu,xF1,consistencyLocalGlobal,...
-                gradientsE,gradientsD] = ...
-                dlfeval(@modelLoss, netE,netD,X, ...
-                        summary_RoofMaterial,n_class,sub_label_roof,ind, ...
-                        loss2_prev, loss3_prev, loss4_prev);
-            loss2_prev = loss2;
-            loss3_prev = loss3;
-            loss4_prev = loss4;
-
-            % Update learnable parameters.
-            [netE,trailingAvgE,trailingAvgSqE] = adamupdate(netE, ...
-                gradientsE,trailingAvgE,trailingAvgSqE,epoch,learnRate);
-
-            [netD, trailingAvgD, trailingAvgSqD] = adamupdate(netD, ...
-                gradientsD,trailingAvgD,trailingAvgSqD,epoch,learnRate);
-
-            [netD, trailingAvgD, trailingAvgSqD] = adamupdate(netD, ...
-                gradientsD,trailingAvgD,trailingAvgSqD,epoch,learnRate);
-
-            % Update the training progress monitor. 
-            % recordMetrics(monitor,epoch, ...
-            % ClusteringLoss=loss1, ...
-            % VariationalAndReconstructionLoss=loss2, ...
-            % PredictionLoss=loss3);
-            % recordMetrics(monitor,epoch, ...
-            % VariationalAndReconstructionLoss=loss2, ...
-            % PredictionLoss=loss3, ...
-            % TPprop = xTPprop, ...
-            % Precision = xPre, ...
-            % Recall = xRec, ...
-            % Accuracy = xAccu, ...
-            % F1Score = xF1);
-            recordMetrics(monitor,epoch, ...
-            ReconstructionLoss=loss2, ...
-            PredictionLoss=loss3, ...
-            GlobalLocalLoss=loss4, ...
-            TPprop=xTPprop, ...
-            GLConsistency=consistencyLocalGlobal, ...
-            Precision = xPre, ...
-            Recall = xRec, ...
-            Accuracy = xAccu, ...
-            F1Score = xF1);
+        end
+        if sum(tau_XX(tau_XX ~= 0)) == 0 && ...
+                size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                    roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1) == 1
+           tau_XX = (numel(tmp_idx4) * ...
+                    jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3) ./ ...
+                    sum(jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3)) == max(numel(tmp_idx4) * ...
+                    jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3) ./ ...
+                    sum(jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3))));
         end
 
-        % Predict
-        [Z,mu,logSigmaSq] = forward(netE,X);
-        % Perform clustering.
-        tau = floor(summary_RoofMaterial .* size(Z,2));
-        if sum(tau) ~= size(Z,2)
-            ttmp = find(tau == max(tau),1);
-            tau(ttmp) = tau(ttmp) + (size(Z,2)-sum(tau));
-        end
+        if sum(tau_XX) ~= size(X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                                    roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:),1)
+            ttmp = find(tau_XX == max(tau_XX),1);
+            tau_XX(ttmp) = tau_XX(ttmp) + (size(X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                                                     roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:),1)      -sum(tau_XX));
+        end   
+
         err = 1; failed = 1;
         while err > 0.01 | failed == 1
             try
-                [labels,centroids] = constrainedKMeans(double(extractdata(Z)'), ...
-                    n_class, tau(tau ~= 0), 1000);
+                [labels,centroids] = constrainedKMeans( X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
+                                                            roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:), ...
+                                                        numel(tau_XX(tau_XX ~= 0)), ...
+                                                        tau_XX(tau_XX ~= 0), ...
+                                                        1000);  
                 failed = 0;
             catch MyErr
                 failed = 1;
             end
             if failed == 0
-                err = sum(abs((tau(tau ~= 0))'-(histcounts(labels)))) ...
-                    ./ sum(tau(tau ~= 0));
+                err = sum(abs(tau_XX(tau_XX ~= 0)'-histcounts(labels))) ./ sum(tau_XX(tau_XX ~= 0));
             end
         end
 
-       
-        % assign roof material
-        roof_assignment = strings(size(X,1),1);
-        nonzero_idx_tau = find(tau ~= 0);
-        for i = 1:n_class
-            iX = find(labels == i);
-            roof_assignment(iX,:) = uniq_RoofMaterial(nonzero_idx_tau(i));
-        end
-        toc, disp("Roof Assigned"), tic
-    
-        % encode roof material to vulnerability class
-        mapping = struct;
-        mapping.wall = data(:, 14:21).Properties.VariableNames';
-        mapping.roof = data(:, 22:25).Properties.VariableNames';
-        mapping.wallProb = summary_WallMaterial;
-        mapping.roofProb = summary_RoofMaterial;
-        mapping.jointP = (mapping.wallProb * mapping.roofProb') ./ ...
-                    sum((mapping.wallProb * mapping.roofProb'), 'all');
-        
-        %% constrained conditional clustering 
-        wall_assignment = strings(size(X,1),1);
-        macro_taxonomy_assignment = strings(size(X,1),1);
-        for i = 1:n_class % per roof category
-        
-            %% assign wall material
-            tmp_idx = find(uniq_RoofMaterial == uniq_RoofMaterial(nonzero_idx_tau(i))   );
-            tau_X = floor(sum(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))) * ...
-                    mapping.jointP(:,tmp_idx) ./ sum(mapping.jointP(:,tmp_idx)) );
-            tau_X(isnan(tau_X)) = 0;
-            if size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))),1) < sum(tau_X(tau_X ~= 0))
-                tau_X = tau_X - (tau_X == max(tau_X)) .* ...
-                (sum(tau_X(tau_X ~= 0)) - size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))),1));
-            elseif size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))),1) == 1
-                temporary = sum(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))) * ...
-                    mapping.jointP(:,tmp_idx) ./ sum(mapping.jointP(:,tmp_idx));
-                tau_X(temporary == max(temporary)) = 1;
-                tau_X(temporary ~= max(temporary)) = 0;
-                tau_X(isnan(tau_X)) = 0;
-            elseif numel(tau_X(tau_X ~= 0)) == 0
-                nelem = size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))),1);
-                tempelem = sum(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i))) * ...
-                        mapping.jointP(:,tmp_idx) ./ sum(mapping.jointP(:,tmp_idx));
-                maxelem = maxk(tempelem, nelem);
-                for g = 1:nelem
-                    tau_X(tempelem == maxelem(g)) = 1;
-                end
-            end
+        % initialize
+        tmp4 = zeros(size(X,1),1);
+        tmp4(tmp_idx4,1) = labels;
+        nonzero_idx_tau_XX = find(tau_XX ~= 0);
 
-            if sum(tau_X) ~= size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:),1)
-                ttmp = find(tau_X == max(tau_X),1);
-                tau_X(ttmp) = tau_X(ttmp) + (size(X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:),1)-sum(tau_X));
-            end
-
-            err = 1; failed = 1;
-            while err > 0.01 | failed == 1
-                try
-                    [labels,centroids] = constrainedKMeans( X(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)),:), ...
-                                                            numel(tau_X(tau_X ~= 0)), ...
-                                                            tau_X(tau_X ~= 0), ...
-                                                            1000);
-                    failed = 0;
-                catch MyErr
-                    failed = 1;
-                end
-                if failed == 0
-                    err = sum(abs(tau_X(tau_X ~= 0)'-histcounts(labels))) ./ sum(tau_X(tau_X ~= 0));
-                end
-            end
-        
-            % initialize
-            tmp_idx2 = find(roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) );
-            tmp2 = zeros(size(X,1),1);
-            tmp2(tmp_idx2,1) = labels;
-            nonzero_idx_tau_X = find(tau_X ~= 0);
-        
-            for j = 1:numel(nonzero_idx_tau_X) % per wall category
-                wall_assignment(tmp2==j,1) = string(mapping.wall(nonzero_idx_tau_X(j),1));
-    
-                %% assign macro-taxonomy given wall material
-                % unlike others, we'll use the settlement type ratio from nQ
-                % because it has some consideration on the dwelling ratio that we
-                % couldn't compute given our approach where our multi-staged
-                % clustering has the "dwelling" towards the end (which was
-                % considered during the estimation of pixels-to-building ratio). I
-                % guess our approach here is more on surface orthogonal projection
-                % of building floor area rather than accounting for the
-                % population-to-dwelling-ratio complexity which can give some
-                % uncertainty. If we just consider the ground floor area of a
-                % building which is common to all dwelling types, we preserve the
-                % building count statistics and not affected by the
-                % popoulation-induced variation in the dwelling-to-building-count
-                % ratios. This was what GEM used and that might be something we've
-                % uniquely addressed here. But, I would still argue that we benefit
-                % from the GEM outout somehow because we incorporated their results
-                % to how we got a set of urban-rural ratios from their resulting
-                % nQ or Q table here. Another difference we have compared with GEM
-                % is the way we spatially disaggregate. Just to note, we just rely
-                % on their ratio calculation, not on the use of WorldPop.
-                tmp_idx3 = find(uniq_WallMaterial == string(mapping.wall(nonzero_idx_tau_X(j),1)));
-                tmp_idx4 = find(wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                                roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) );
-        
-                tau_XX = round(    numel(tmp_idx4) * ...
-                            jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3) ./ ...
-                            sum(jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3))) ;
-                tau_XX(isnan(tau_XX)) = 0;
-                if size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                            roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1) < sum(tau_XX(tau_XX ~= 0))
-                    tau_XX = tau_XX - (tau_XX == max(tau_XX)) .* ...
-                    (sum(tau_XX(tau_XX ~= 0)) - ...
-                    size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                            roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1));
-                end
-                if numel(tau_XX(tau_XX ~= 0)) == 0 && size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                            roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1) == 1
-                    nelem = size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                            roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1);
-                    tempelem = numel(tmp_idx4) * ...
-                            jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3) ./ ...
-                            sum(jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3));
-                    maxelem = maxk(tempelem, nelem);
-                    idxelem = find(tempelem == maxelem);
-                    for g = 1:nelem
-                        tau_XX(idxelem(g)) = 1;
-                    end
-                end
-                if sum(tau_XX(tau_XX ~= 0)) == 0 && ...
-                        size(X(( wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                            roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) )) ,1) == 1
-                   tau_XX = (numel(tmp_idx4) * ...
-                            jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3) ./ ...
-                            sum(jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3)) == max(numel(tmp_idx4) * ...
-                            jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3) ./ ...
-                            sum(jointProb_MacroTaxonomyANDWallMaterial(:,tmp_idx3))));
-                end
-
-                if sum(tau_XX) ~= size(X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                                            roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:),1)
-                    ttmp = find(tau_XX == max(tau_XX),1);
-                    tau_XX(ttmp) = tau_XX(ttmp) + (size(X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                                                             roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:),1)      -sum(tau_XX));
-                end   
-   
-                err = 1; failed = 1;
-                while err > 0.01 | failed == 1
-                    try
-                        [labels,centroids] = constrainedKMeans( X(  (wall_assignment == string(mapping.wall(nonzero_idx_tau_X(j),1)) & ...
-                                                                    roof_assignment == uniq_RoofMaterial(nonzero_idx_tau(i)) ) ,:), ...
-                                                                numel(tau_XX(tau_XX ~= 0)), ...
-                                                                tau_XX(tau_XX ~= 0), ...
-                                                                1000);  
-                        failed = 0;
-                    catch MyErr
-                        failed = 1;
-                    end
-                    if failed == 0
-                        err = sum(abs(tau_XX(tau_XX ~= 0)'-histcounts(labels))) ./ sum(tau_XX(tau_XX ~= 0));
-                    end
-                end
-    
-                % initialize
-                tmp4 = zeros(size(X,1),1);
-                tmp4(tmp_idx4,1) = labels;
-                nonzero_idx_tau_XX = find(tau_XX ~= 0);
-        
-                for k = 1:numel(nonzero_idx_tau_XX) % per macro
-                    macro_taxonomy_assignment(tmp4==k,1) = string(uniq_MacroTaxonomy(nonzero_idx_tau_XX(k),1));
-                end
-            end
+        for k = 1:numel(nonzero_idx_tau_XX) % per macro
+            macro_taxonomy_assignment(tmp4==k,1) = string(uniq_MacroTaxonomy(nonzero_idx_tau_XX(k),1));
         end
-        toc, disp("Wall and MacroTaxo Assigned"), tic
-        %% assign height class given macro-taxonomy
-        height_class_assignment = strings(size(X,1),1);
-        uniq_MacroTaxonomy_from_assignment = unique(macro_taxonomy_assignment);
-        for j = 1:numel(uniq_MacroTaxonomy_from_assignment) % per macro taxo category
-        
-            % same explanation as before
-            tmp_idx5 = find(uniq_MacroTaxonomy == string(uniq_MacroTaxonomy_from_assignment(j,1))   );
-            tmp_idx6 = find(macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) );
-            
-            tau_XXX = round(    numel(tmp_idx6) * ...
-            jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) ./ ...
-            sum(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) ;
-            tau_XXX(isnan(tau_XXX)) = 0;
-            
-            if size(X(macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1))) ,1) ...
-                           < sum(tau_XXX(tau_XXX ~= 0))
-                tau_XXX = tau_XXX - (tau_XXX == max(tau_XXX)) .* ...
-                (sum(tau_XXX(tau_XXX ~= 0)) - ...
-                size(X(  macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ),1));
-            elseif size(X(macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1))) ,1) == 1
-                tau_XXX(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) == max(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) = 1;
-                tau_XXX(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) ~= max(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) = 0;
-                tau_XXX(isnan(tau_XXX)) = 0;
-            end
-
-            if sum(tau_XXX) ~= size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)
-                ttmp = find(tau_XXX == max(tau_XXX),1);
-                tau_XXX(ttmp) = tau_XXX(ttmp) + (size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)-sum(tau_XXX));
-            end
-            
-
-            err = 1; failed = 1;
-            while err > 0.01 | failed == 1
-                try
-                    [labels,centroids] = constrainedKMeans( X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:), ...
-                                                            numel(tau_XXX(tau_XXX ~= 0)), ...
-                                                            tau_XXX(tau_XXX ~= 0), ...
-                                                            1000);
-                    failed = 0;
-                catch MyErr
-                    failed = 1;
-                end
-                if failed == 0
-                    err = sum(abs(tau_XXX(tau_XXX ~= 0)'-histcounts(labels))) ./ sum(tau_XXX(tau_XXX ~= 0));
-                end
-            end
-
-            % initialize
-            tmp6 = zeros(size(X,1),1);
-            tmp6(tmp_idx6,1) = labels;
-            nonzero_idx_tau_XXX = find(tau_XXX ~= 0);
-        
-            for m = 1:numel(nonzero_idx_tau_XXX) % per height class
-                height_class_assignment(tmp6==m,1) = ...
-                    string(uniq_HeightClass(nonzero_idx_tau_XXX(m),1));
-            end
-        
-        end
-        toc, disp("Height Assigned"), tic
-        
-        height_class_assignment_id = zeros(size(X,1),1);
-        for i = 1:numel(uniq_HeightClass)
-            height_class_assignment_id((height_class_assignment==uniq_HeightClass(i)),1) = i;
-        end
-        roof_assignment_id = zeros(size(X,1),1);
-        for i = 1:numel(uniq_RoofMaterial)
-            roof_assignment_id((roof_assignment==uniq_RoofMaterial(i)),1) = i;
-        end
-        macro_taxonomy_assignment_id = zeros(size(X,1),1);
-        for i = 1:numel(uniq_MacroTaxonomy)
-            macro_taxonomy_assignment_id((macro_taxonomy_assignment==uniq_MacroTaxonomy(i)),1) = i;
-        end
-        wall_assignment_id = zeros(size(X,1),1);
-        for i = 1:numel(uniq_WallMaterial)
-            wall_assignment_id((wall_assignment==uniq_WallMaterial(i)),1) = i;
-        end
-        
-        ii = find(valid_idx==1);
-        y_height(ii) = height_class_assignment_id;
-        y_roof(ii) = roof_assignment_id;
-        y_macrotaxo(ii) = macro_taxonomy_assignment_id;
-        y_wall(ii) = wall_assignment_id;
-    
-        toc, disp("Finished"), tic
     end
 end
+toc, disp("Wall and MacroTaxo Assigned"), tic
+%% assign height class given macro-taxonomy
+height_class_assignment = strings(size(X,1),1);
+uniq_MacroTaxonomy_from_assignment = unique(macro_taxonomy_assignment);
+for j = 1:numel(uniq_MacroTaxonomy_from_assignment) % per macro taxo category
+
+    % same explanation as before
+    tmp_idx5 = find(uniq_MacroTaxonomy == string(uniq_MacroTaxonomy_from_assignment(j,1))   );
+    tmp_idx6 = find(macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) );
+    
+    tau_XXX = round(    numel(tmp_idx6) * ...
+    jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) ./ ...
+    sum(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) ;
+    tau_XXX(isnan(tau_XXX)) = 0;
+    
+    if size(X(macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1))) ,1) ...
+                   < sum(tau_XXX(tau_XXX ~= 0))
+        tau_XXX = tau_XXX - (tau_XXX == max(tau_XXX)) .* ...
+        (sum(tau_XXX(tau_XXX ~= 0)) - ...
+        size(X(  macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ),1));
+    elseif size(X(macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1))) ,1) == 1
+        tau_XXX(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) == max(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) = 1;
+        tau_XXX(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) ~= max(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) = 0;
+        tau_XXX(isnan(tau_XXX)) = 0;
+    end
+
+    if sum(tau_XXX) ~= size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)
+        ttmp = find(tau_XXX == max(tau_XXX),1);
+        tau_XXX(ttmp) = tau_XXX(ttmp) + (size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)-sum(tau_XXX));
+    end
+    
+
+    err = 1; failed = 1;
+    while err > 0.01 | failed == 1
+        try
+            [labels,centroids] = constrainedKMeans( X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:), ...
+                                                    numel(tau_XXX(tau_XXX ~= 0)), ...
+                                                    tau_XXX(tau_XXX ~= 0), ...
+                                                    1000);
+            failed = 0;
+        catch MyErr
+            failed = 1;
+        end
+        if failed == 0
+            err = sum(abs(tau_XXX(tau_XXX ~= 0)'-histcounts(labels))) ./ sum(tau_XXX(tau_XXX ~= 0));
+        end
+    end
+
+    % initialize
+    tmp6 = zeros(size(X,1),1);
+    tmp6(tmp_idx6,1) = labels;
+    nonzero_idx_tau_XXX = find(tau_XXX ~= 0);
+
+    for m = 1:numel(nonzero_idx_tau_XXX) % per height class
+        height_class_assignment(tmp6==m,1) = ...
+            string(uniq_HeightClass(nonzero_idx_tau_XXX(m),1));
+    end
+
+end
+toc, disp("Height Assigned"), tic
+
+height_class_assignment_id = zeros(size(X,1),1);
+for i = 1:numel(uniq_HeightClass)
+    height_class_assignment_id((height_class_assignment==uniq_HeightClass(i)),1) = i;
+end
+roof_assignment_id = zeros(size(X,1),1);
+for i = 1:numel(uniq_RoofMaterial)
+    roof_assignment_id((roof_assignment==uniq_RoofMaterial(i)),1) = i;
+end
+macro_taxonomy_assignment_id = zeros(size(X,1),1);
+for i = 1:numel(uniq_MacroTaxonomy)
+    macro_taxonomy_assignment_id((macro_taxonomy_assignment==uniq_MacroTaxonomy(i)),1) = i;
+end
+wall_assignment_id = zeros(size(X,1),1);
+for i = 1:numel(uniq_WallMaterial)
+    wall_assignment_id((wall_assignment==uniq_WallMaterial(i)),1) = i;
+end
+
+ii = find(valid_idx==1);
+y_height(ii) = height_class_assignment_id;
+y_roof(ii) = roof_assignment_id;
+y_macrotaxo(ii) = macro_taxonomy_assignment_id;
+y_wall(ii) = wall_assignment_id;
+
+toc, disp("Finished"), tic
 
 %%
 geotiffwrite("output/20240907_DC_411/y_height.tif",(y_height),maskR)
