@@ -59,6 +59,12 @@ col = [];
 ind = [];
 tau = zeros(4,1);
 
+ind_batch = cell(length(sub_label2rasterID.RASTER_ID1),1);
+X_batch = cell(length(sub_label2rasterID.RASTER_ID1),1);
+tau_batch = cell(length(sub_label2rasterID.RASTER_ID1),1);
+n_class_batch = cell(length(sub_label2rasterID.RASTER_ID1),1);
+indtemp_batch = cell(length(sub_label2rasterID.RASTER_ID1),1);
+
 for idx_rID = 1:length(sub_label2rasterID.RASTER_ID1)
 
     rID = sub_label2rasterID.RASTER_ID1(idx_rID);
@@ -251,49 +257,109 @@ for idx_rID = 1:length(sub_label2rasterID.RASTER_ID1)
         % leverage the roof material census instead and wall height as the joint
         % labels, and then we'll post-process it with our encoded belief on the
         % relationship between roof material, wall material, and height class.
-        [rowS,colS] = find(x_s1vv>0); % incorporate spatial element
-        row = [row; rowS];
-        col = [col; colS];
-        ind = [ind; find(x_s1vv>0)];
-        X = [X; full([  ...
-                    normalize(log(x_s1vv(x_s1vv>0))) ...
-                    normalize(log(x_s1vh(x_s1vh>0))) ...
-                    normalize(log(x_r(x_r>0))) ...
-                    normalize(log(x_g(x_g>0))) ...
-                    normalize(log(x_b(x_b>0))) ...
-                    normalize(log(x_red1(x_red1>0))) ...
-                    normalize(log(x_red2(x_red2>0))) ...
-                    normalize(log(x_red3(x_red3>0))) ...
-                    normalize(log(x_red4(x_red4>0))) ...
-                    normalize(log(x_swir1(x_swir1>0))) ...
-                    normalize(log(x_swir2(x_swir2>0))) ...
-                    normalize(log(x_nir(x_nir>0))) ...
-                    normalize(rowS) ...
-                    normalize(colS) ...
-                    ...
-                    ])];
 
+        % Check if this is a valid rID, else skip
+        sub_label_roof  = sparse(double(btype_label(find(x_s1vv>0))));
+        temp = sub_label_roof;
+        indtemp = find(temp>0 & temp<=7);
+        indtemp_batch{idx_rID,1} = indtemp;
 
-        %% ground truth class representation for global clustering
-        % ROOF - common to all rIDs
-        uniq_RoofMaterial =     string(data((data.Sector == sector) & ...
-                                (data.Province == province) & ...
-                                (data.District == district), 22:25).Properties.VariableNames)';
-        summary_RoofMaterial =  table2array(data((data.Sector == sector) & ...
-                                (data.Province == province) & ...
-                                (data.District == district), 22:25))';
-        summary_RoofMaterial(isnan(summary_RoofMaterial)) = 0;
-        summary_RoofMaterial = summary_RoofMaterial ./ sum(summary_RoofMaterial);
-        tauS = floor(summary_RoofMaterial .* length(find(x_s1vv>0)));
-        if sum(tauS) ~= length(find(x_s1vv>0))
-            ttmp = find(tauS == max(tauS),1);
-            tauS(ttmp) = tauS(ttmp) + (length(find(x_s1vv>0))-sum(tauS));
+        if ~isempty(indtemp)
+
+            ind_batch{idx_rID,1} = find(x_s1vv>0);
+            ind = [ind; ind_batch{idx_rID,1}];
+    
+            
+            [rowS,colS] = find(x_s1vv>0); % incorporate spatial element
+            row = [row; rowS];
+            col = [col; colS];
+    
+    
+            X_batch{idx_rID,1} = full([  ...
+                        normalize(log(x_s1vv(x_s1vv>0))) ...
+                        normalize(log(x_s1vh(x_s1vh>0))) ...
+                        normalize(log(x_r(x_r>0))) ...
+                        normalize(log(x_g(x_g>0))) ...
+                        normalize(log(x_b(x_b>0))) ...
+                        normalize(log(x_red1(x_red1>0))) ...
+                        normalize(log(x_red2(x_red2>0))) ...
+                        normalize(log(x_red3(x_red3>0))) ...
+                        normalize(log(x_red4(x_red4>0))) ...
+                        normalize(log(x_swir1(x_swir1>0))) ...
+                        normalize(log(x_swir2(x_swir2>0))) ...
+                        normalize(log(x_nir(x_nir>0))) ...
+                        % normalize(rowS) ...
+                        % normalize(colS) ...
+                        ...
+                        ]);
+            X = [X; full([  ...
+                        normalize(log(x_s1vv(x_s1vv>0))) ...
+                        normalize(log(x_s1vh(x_s1vh>0))) ...
+                        normalize(log(x_r(x_r>0))) ...
+                        normalize(log(x_g(x_g>0))) ...
+                        normalize(log(x_b(x_b>0))) ...
+                        normalize(log(x_red1(x_red1>0))) ...
+                        normalize(log(x_red2(x_red2>0))) ...
+                        normalize(log(x_red3(x_red3>0))) ...
+                        normalize(log(x_red4(x_red4>0))) ...
+                        normalize(log(x_swir1(x_swir1>0))) ...
+                        normalize(log(x_swir2(x_swir2>0))) ...
+                        normalize(log(x_nir(x_nir>0))) ...
+                        % normalize(rowS) ...
+                        % normalize(colS) ...
+                        ...
+                        ])];
+    
+    
+            %% ground truth class representation for global clustering
+            % ROOF - common to all rIDs
+            uniq_RoofMaterial =     string(data((data.Sector == sector) & ...
+                                    (data.Province == province) & ...
+                                    (data.District == district), 22:25).Properties.VariableNames)';
+            summary_RoofMaterial =  table2array(data((data.Sector == sector) & ...
+                                    (data.Province == province) & ...
+                                    (data.District == district), 22:25))';
+            summary_RoofMaterial(isnan(summary_RoofMaterial)) = 0;
+            summary_RoofMaterial = summary_RoofMaterial ./ sum(summary_RoofMaterial);
+            tauS = floor(summary_RoofMaterial .* length(find(x_s1vv>0)));
+            if sum(tauS) ~= length(find(x_s1vv>0))
+                ttmp = find(tauS == max(tauS),1);
+                tauS(ttmp) = tauS(ttmp) + (length(find(x_s1vv>0))-sum(tauS));
+            end
+            tau = tau + tauS;
+            n_class = sum(tau > 1e-5);
+            tau_batch{idx_rID,1} = tauS;
+            n_class_batch{idx_rID,1} = sum(tauS > 1e-5);
         end
-        tau = tau + tauS;
-        n_class = sum(tau > 1e-5);
 
     end
 end
+
+
+% Remove empty batches
+nelem = zeros(length(n_class_batch),1);
+for i = 1:length(n_class_batch)
+    nelem(i,1) = length(indtemp_batch{i});
+end 
+idx_removed = [];
+for i = 1:length(n_class_batch)
+    if isempty(n_class_batch{i}) | nelem(i) < 100 %found out that a small data worsens the learning
+        idx_removed = [idx_removed i];
+    end
+end
+if ~isempty(idx_removed)
+    X_batch(idx_removed,:) = [];
+    ind_batch(idx_removed,:) = [];
+    tau_batch(idx_removed,:) = [];
+    n_class_batch(idx_removed,:) = [];
+    indtemp_batch(idx_removed,:) = [];
+end
+nelem = zeros(length(n_class_batch),1);
+for i = 1:length(n_class_batch)
+    nelem(i,1) = length(indtemp_batch{i});
+end 
+
+
         
 % WALL - common to all rIDs
 % uniq_WallMaterial = string(data((data.Sector == sector) & ...
@@ -334,77 +400,43 @@ end
 % jointProb_HeightClassANDMacroTaxonomy = jointProb_HeightClassANDMacroTaxonomy ./ ...
 %                     sum(jointProb_HeightClassANDMacroTaxonomy, 'all');
 
-%% DR
-
-% PCA - linear, can be probabilistic using PPCA
-% [~,score,~,~,explainedVar] = pca(X);
-% sum_explainedVar = 0;
-% for i = 1:length(explainedVar)
-%     if sum(explainedVar(1:i,1)) >= 90
-%         break
-%     end
-% end
-% X = score(:,1:i);
-
-% tSNE - nonlinear
-% [Y,loss] = tsne(X, "Distance","euclidean");
-% X = Y;
-
-% tau = floor(summary_RoofMaterial .* size(X,1));
-% if sum(tau) ~= size(X,1)
-%     ttmp = find(tau == max(tau),1);
-%     tau(ttmp) = tau(ttmp) + (size(X,1)-sum(tau));
-% end
-% err = 1; failed = 1;
-% while err > 0.01 | failed == 1
-%     try
-%         [labels,centroids] = constrainedKMeans(X, n_class, tau(tau ~= 0), 1000);
-%         failed = 0;
-%     catch MyErr
-%         failed = 1;
-%     end
-%     if failed == 0
-%         err = sum(abs((tau(tau ~= 0))'-(histcounts(labels)))) ./ sum(tau(tau ~= 0));
-%     end
-% end
-
-
-%% autoencoder - deep & nonlinear, probabilistic via variational,
+%% DR autoencoder - deep & nonlinear, probabilistic via variational,
 % image-applicable via convolutional, 
-sub_label_roof  = sparse(double(btype_label(ind)));
 numFeatures = size(X,2);
-hiddenSize = 8;
 numLatentChannels = 1;
 
-% layersE = [
-%     featureInputLayer(numFeatures) %12
-%     fullyConnectedLayer(hiddenSize) %10
-%     layerNormalizationLayer %10
-%     reluLayer %10
-%     fullyConnectedLayer(2*numLatentChannels) %10
-%     samplingLayer]; %5
-
 layersE = [
-    featureInputLayer(numFeatures) %12
-    fullyConnectedLayer(hiddenSize) %10
-    layerNormalizationLayer %10
-    reluLayer %10
-    fullyConnectedLayer(numLatentChannels)]; %5
+    featureInputLayer(numFeatures) 
+    fullyConnectedLayer(10)
+    reluLayer
+    layerNormalizationLayer
+    fullyConnectedLayer(6)
+    reluLayer
+    layerNormalizationLayer
+    fullyConnectedLayer(3)
+    fullyConnectedLayer(1)
+    sigmoidLayer]; %5 %to avoid NAN, occurred to Z when encoded, must be related to the weights
 
 layersD = [
-    featureInputLayer(numLatentChannels) %5
-    fullyConnectedLayer(hiddenSize) %10
-    reluLayer %10
-    fullyConnectedLayer(12)  %12
-    reluLayer %12
-    fullyConnectedLayer(numFeatures)];
+    featureInputLayer(1)
+    fullyConnectedLayer(3) 
+    layerNormalizationLayer
+    reluLayer
+    fullyConnectedLayer(6)  
+    layerNormalizationLayer
+    reluLayer
+    fullyConnectedLayer(10)
+    fullyConnectedLayer(numFeatures)]; %14
 
+gradDecay = 0.8;
+sqGradDecay = 0.95;
+learnRate = 1e-4;
 
 netE = dlnetwork(layersE);
 netD = dlnetwork(layersD);
 
-numEpochs = 500;
-learnRate = 1e-3;
+numEpochs = 300;
+nBatch = length(ind_batch);
 regularization = 0.05;
 
 trailingAvgE = [];
@@ -412,79 +444,93 @@ trailingAvgSqE = [];
 trailingAvgD = [];
 trailingAvgSqD = [];
 
-% applicable only for minibatch setting
-% numObservationsTrain = size(X,1);
-% miniBatchSize = 1; tau
-% numIterationsPerEpoch = ceil(numObservationsTrain / miniBatchSize);
-% numIterations = numEpochs * numIterationsPerEpoch;
-
 monitor = trainingProgressMonitor;
-% monitor.Info = ["ClusteringLoss","VariationalAndReconstructionLoss","PredictionLoss","Epoch"];
-% monitor.Metrics = ["ClusteringLoss","VariationalAndReconstructionLoss","PredictionLoss"];
-monitor.Info = ["ReconstructionLoss","PredictionLoss","Epoch"];
-monitor.Metrics = ["ReconstructionLoss","PredictionLoss",...
-    "TPprop","Precision","Recall","Accuracy","F1Score"];
-monitor.XLabel = "Epoch";
-% groupSubPlot(monitor,"ClusteringLoss","ClusteringLoss");
+monitor.Metrics = [ "ReconstructionLoss", ...
+                    "PredictionLoss", ...
+                    "IterationTPprop"];
+monitor.XLabel = "Iteration";
 groupSubPlot(monitor,"ReconstructionLoss","ReconstructionLoss");
 groupSubPlot(monitor,"PredictionLoss","PredictionLoss");
-groupSubPlot(monitor,"TPprop","TPprop");
-groupSubPlot(monitor,"Precision","Precision");
-groupSubPlot(monitor,"Recall","Recall");
-groupSubPlot(monitor,"Accuracy","Accuracy");
-groupSubPlot(monitor,"F1Score","F1Score");
-XDL = dlarray(X, 'BC');
+groupSubPlot(monitor,"IterationTPprop","IterationTPprop");
+
+monitor1 = trainingProgressMonitor;
+monitor1.Metrics = ["BatchTPprop"];
+monitor1.XLabel = "Epoch";
+groupSubPlot(monitor1,"BatchTPprop","BatchTPprop");
 
 % Loop over epochs.
-epoch = 0;  
+epoch = 0; iter = 0;
 while epoch < numEpochs && ~monitor.Stop
     epoch = epoch + 1
-
-    % Evaluate loss and gradients.
+    xBatchTPprop = [];
     if epoch == 1
         loss2_prev = 1;
         loss3_prev = 1;
-        % loss4_prev = 1;
     end
-    [loss2,loss3,...
-        xTPprop,xPre,xRec,xAccu,xF1,...
-        gradientsE,gradientsD] = ...
-        dlfeval(@modelLoss, netE,netD,XDL, ...
-                tau,n_class,sub_label_roof,ind, ...
-                loss2_prev, loss3_prev);
-    loss2_prev = loss2;
-    loss3_prev = loss3;
-    % loss4_prev = loss4;
-
-    % Update learnable parameters.
-    [netE,trailingAvgE,trailingAvgSqE] = adamupdate(netE, ...
-        gradientsE,trailingAvgE,trailingAvgSqE,epoch,learnRate);
-
-    [netD, trailingAvgD, trailingAvgSqD] = adamupdate(netD, ...
-        gradientsD,trailingAvgD,trailingAvgSqD,epoch,learnRate);
-
-    % Update the training progress monitor. 
-    % recordMetrics(monitor,epoch, ...
-    % ClusteringLoss=loss1, ...
-    % VariationalAndReconstructionLoss=loss2, ...
-    % PredictionLoss=loss3);
-    % recordMetrics(monitor,epoch, ...
-    % VariationalAndReconstructionLoss=loss2, ...
-    % PredictionLoss=loss3, ...
-    % TPprop = xTPprop, ...
-    % Precision = xPre, ...
-    % Recall = xRec, ...
-    % Accuracy = xAccu, ...
-    % F1Score = xF1);
-    recordMetrics(monitor,epoch, ...
-    ReconstructionLoss=loss2, ...
-    PredictionLoss=loss3, ...
-    TPprop=xTPprop, ...
-    Precision = xPre, ...
-    Recall = xRec, ...
-    Accuracy = xAccu, ...
-    F1Score = xF1);
+    % shuffle_indexes = randperm(nBatch);
+    % 26, 29, 12, 6, 7
+    for iter = 1:nBatch
+        j = iter;
+        % iter = shuffle_indexes(j);
+        % Evaluate loss and gradients.
+        [loss2,loss3,...
+            xTPprop,...
+            gradientsE,gradientsD] = ...
+            dlfeval(@modelLoss,...
+                    netE,netD,...
+                    dlarray(X_batch{iter}, 'BC'), ...
+                    tau_batch{iter},...
+                    n_class_batch{iter},...
+                    btype_label,...
+                    ind_batch{iter}, ...
+                    loss2_prev,...
+                    loss3_prev,...
+                    sum(nelem),...
+                    nelem(iter));
+        loss2_prev = loss2;
+        loss3_prev = loss3;
+        xBatchTPprop = [xBatchTPprop; 
+                        xTPprop.*nelem(iter)./sum(nelem)];
+    
+        % Update learnable parameters.
+        [netE,trailingAvgE,trailingAvgSqE] = adamupdate(netE, ...
+            gradientsE,trailingAvgE,trailingAvgSqE,...
+            (epoch-1).*nBatch+j,learnRate,gradDecay,sqGradDecay);
+    
+        [netD, trailingAvgD, trailingAvgSqD] = adamupdate(netD, ...
+            gradientsD,trailingAvgD,trailingAvgSqD,...
+            (epoch-1).*nBatch+j,learnRate,gradDecay,sqGradDecay);
+    
+        recordMetrics(monitor, ...
+            (epoch-1).*nBatch+j, ...
+            ReconstructionLoss=loss2, ...
+            PredictionLoss=loss3, ...
+            IterationTPprop=xTPprop);
+    end
+    xBatchTPprop = sum(xBatchTPprop);
+    recordMetrics(monitor1, ...
+            epoch, ...
+            BatchTPprop=xBatchTPprop);
 end
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 % Predict
 [Z,mu,logSigmaSq] = forward(netE,X);
