@@ -1,4 +1,4 @@
-function [labels,centroids,distance_error] = constrainedKMeans_DEC(Z, K, tau, maxiter)
+function [labels,centroids] = constrainedKMeans_DEC(Z, K, tau, maxiter)
 %{
 Implements the constrained K-Means algorithm. This algorithm is a
 balance-driven version of the canonical K-Means clustering algorithm. It
@@ -29,25 +29,17 @@ Written by Sam Polk (MITLL, 03-39) on 9/8/22.
 % Extract dataset size information
 [D,n] = size(Z);
 
-% Parse inputs to algorithm
-if nargin == 2
-    tau = min(0.05*n, 0.5*n/K);
-    maxiter = 100;
-elseif nargin == 3
-    maxiter=100;
-end
-
 % Assign initial clusters and centroids
 labels = onehotencode(randi(K,n,1),2,"ClassNames",1:K);
 Z_onehotencoded = Z.*repmat(reshape(labels,[1 n K]),[D 1 1]);
 centroids = mean(Z_onehotencoded,2);
 
 % Variable needed for while-loop.
-% iter = 1; % Used to ensure that we not exceed maxiter iterations. 
+iter = 1; centroid_loss = 1; centroid_loss_prev = 2;% Used to ensure that we not exceed maxiter iterations. 
 % 
-% while iter<maxiter  
+while iter<maxiter && centroid_loss>1e-4
     % iter
-    
+
     % Below is our objective function. By default, this script uses 
     objectiveFunction = reshape(0.5*...
         pdist2(     double(sum(extractdata(Z_onehotencoded),3))',...
@@ -78,7 +70,6 @@ centroids = mean(Z_onehotencoded,2);
     Z_onehotencoded_new = Z.*repmat(reshape(labelsNewOneHot,[1 n K]),[D 1 1]);
     centroidsNew = mean(Z_onehotencoded_new,2);
     labels = labelsNew;
-    centroids = centroidsNew;
 
     % Compare centroids from prior iteration and current iteration. 
     % The following condition will be true if labels do not change across
@@ -86,17 +77,19 @@ centroids = mean(Z_onehotencoded,2);
     % diag(pdist2(centroids, centroidsNew)) 
     % % - this is a good metric for
     % evaluation for publication or paper
-    % if sum(diag(pdist2(centroids, centroidsNew)) == zeros(K,1)) == K % 2 % True if centroids do not change. 
-    %     labels = labelsNew;
-    %     centroids = centroidsNew;
-    %     iter % show final iter
-    %     break
-    % else
-    %     % Take current centroids and move to next iteration.
-    %     centroids = centroidsNew;
-    %     iter = iter+1;
-    % end
-% end
+    % centroid_loss = sum(diag(pdist2(extractdata(centroids(:)), extractdata(centroidsNew(:)))))
+    if (sum(diag(pdist2(extractdata(centroids(:)), extractdata(centroidsNew(:)))) == zeros(K*2,1)) == K*2) || centroid_loss<=1e-4 || (centroid_loss==centroid_loss_prev)
+        labels = labelsNew;
+        centroids = centroidsNew;
+        % iter % show final iter
+        break
+    else
+        % Take current centroids and move to next iteration.
+        centroid_loss_prev = centroid_loss;
+        centroids = centroidsNew;
+        iter = iter+1;
+    end
+end
         
 
 

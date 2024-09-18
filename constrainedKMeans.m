@@ -48,7 +48,7 @@ end
 iter = 1; % Used to ensure that we not exceed maxiter iterations. 
 
 while iter<maxiter  
-    % iter
+    iter
     
     % Below is our objective function. By default, this script uses 
     objectiveFunction = reshape(0.5*pdist2(X, centroids).^2, [n*K,1]); % Squared Euclidean distance between data points and centroids, vectorized
@@ -69,7 +69,7 @@ while iter<maxiter
     b3 = -tau; 
 
     % Run linear program to get new cluster assignments
-    options = optimoptions('intlinprog','Display','none');
+    options = optimoptions('intlinprog','Display','iter');
     T = intlinprog(objectiveFunction, 1:n*K, [A1; A2; A3], [b1; b2; b3], [], [], zeros(n*K,1), ones(n*K,1), options);
     [~, labelsNew] = max(reshape(T,n,K), [], 2);
 

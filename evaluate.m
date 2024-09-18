@@ -151,25 +151,25 @@ sub_y_wall = y_wall(idx_wall);
 % btype_label 
 % 1: Rudimentary, basic or unplanned buildings
 %       y_roof: 1, 4
-%       y_wall: All except 4, 5
+%       y_wall: All except (Cement blocks), (Concrete)
 % 2: Building in block structure/large courtyard buildings
 %       y_roof: 1
-%       y_wall: 4, 5, 8
+%       y_wall: (Cement blocks), (Concrete), (Burnt bricks)
 % 3: Bungalow-type buildings
 %       y_roof: 1, 2
-%       y_wall: 4, 5, 8
+%       y_wall: (Cement blocks), (Concrete), (Burnt bricks)
 % 4: Villa-type buildings
 %       y_roof: 1, 2
-%       y_wall: 4, 5
+%       y_wall: (Cement blocks), (Concrete)
 % 5: Low to mid-rise multi-unit buildings
 %       y_roof: 2
-%       y_wall: 4, 5
+%       y_wall: (Cement blocks), (Concrete)
 % 6: High-rise buildings
 %       y_roof: 3
-%       y_wall: 5
+%       y_wall: (Concrete)
 % 7: Halls
 %       y_roof: 1
-%       y_wall: 4, 5
+%       y_wall: (Cement blocks), (Concrete)
 % 8: Special structures
 %       y_roof: na
 %       y_wall: na
