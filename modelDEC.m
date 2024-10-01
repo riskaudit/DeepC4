@@ -1,5 +1,5 @@
 clear, clc, close
-cd '/Users/joshuadimasaka/Desktop/PhD/GitHub/rwa'
+cd '/Users/joshuadimasaka/Desktop/PhD/GitHub/DeepC4'
 
 %% load mask
 [mask, maskR] = readgeoraster("data/MASK/rasterized_vector.tif");
