@@ -31,8 +31,8 @@ Written by Sam Polk (MITLL, 03-39) on 9/8/22.
 
 % Assign initial clusters and centroids
 labels = onehotencode(randi(K,n,1),2,"ClassNames",1:K);
-Z_onehotencoded = Z.*repmat(reshape(labels,[1 n K]),[D 1 1]);
-centroids = mean(Z_onehotencoded,2);
+Z_onehotencoded = repmat(Z,[1,1,K]).*repmat(reshape(labels,[1 n K]),[D 1 1]);
+centroids = sum(Z_onehotencoded,2)./sum(repmat(reshape(labels,[1 n K]),[D 1 1]),2); % D n K
 
 % Variable needed for while-loop.
 iter = 1; centroid_loss = 1; centroid_loss_prev = 2;% Used to ensure that we not exceed maxiter iterations. 
@@ -67,8 +67,9 @@ while iter<maxiter && centroid_loss>1e-4
     [~, labelsNew] = max(reshape(T,n,K), [], 2);
 
     labelsNewOneHot = onehotencode(labelsNew,2,"ClassNames",1:K);
-    Z_onehotencoded_new = Z.*repmat(reshape(labelsNewOneHot,[1 n K]),[D 1 1]);
-    centroidsNew = mean(Z_onehotencoded_new,2);
+    Z_onehotencoded_new = repmat(Z,[1,1,K]).*repmat(reshape(labelsNewOneHot,[1 n K]),[D 1 1]);
+    centroidsNew = sum(Z_onehotencoded_new,2)./sum(repmat(reshape(labelsNewOneHot,[1 n K]),[D 1 1]),2); % D n K
+    centroidsNew(isnan(centroidsNew))=0; % fix for empty cluster assignment
     labels = labelsNew;
 
     % Compare centroids from prior iteration and current iteration. 
@@ -77,14 +78,18 @@ while iter<maxiter && centroid_loss>1e-4
     % diag(pdist2(centroids, centroidsNew)) 
     % % - this is a good metric for
     % evaluation for publication or paper
-    % centroid_loss = sum(diag(pdist2(extractdata(centroids(:)), extractdata(centroidsNew(:)))))
-    if (sum(diag(pdist2(extractdata(centroids(:)), extractdata(centroidsNew(:)))) == zeros(K*2,1)) == K*2) || centroid_loss<=1e-4 || (centroid_loss==centroid_loss_prev)
+    centroid_loss = mse(extractdata(centroids),extractdata(centroidsNew)); %sum(diag(pdist2(extractdata(centroids(:)), extractdata(centroidsNew(:)))))
+    if (sum(diag(pdist2(extractdata(centroids(:)), extractdata(centroidsNew(:)))) == zeros(K*D,1)) == K*D) || centroid_loss<=1e-4 || abs(centroid_loss-centroid_loss_prev)<=1e-4
+        disp('cluster succesful');
         labels = labelsNew;
         centroids = centroidsNew;
         % iter % show final iter
         break
     else
         % Take current centroids and move to next iteration.
+        % centroid_loss
+        % abs(centroid_loss-centroid_loss_prev)
+        labels = labelsNew;
         centroid_loss_prev = centroid_loss;
         centroids = centroidsNew;
         iter = iter+1;
