@@ -1,7 +1,8 @@
 clear, clc, close
 cd '/Users/joshuadimasaka/Desktop/PhD/GitHub/DeepC4'
 
-%% load mask
+%% load data
+
 [mask, maskR] = readgeoraster("data/MASK/rasterized_vector.tif");
 label2rasterID = readtable("data/MASK/MAPPING_RASTER_ID_AND_LABEL.xlsx");
 
