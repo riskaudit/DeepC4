@@ -24,35 +24,30 @@ optloadTrainData = 2;
 %% Graph Convolutional Autoencoder
 
 % Create Graph
-tic, [A_batch] = createGraph(X_batch,nelem); toc % Elapsed time is 118.840301 seconds.
+k = 25; % no of nearest node to be connected with
+tic, [A_batch] = createGraph(X_batch,nelem,k); toc % Elapsed time is 118.840301 seconds.
 
 % Initialize Parameters
 numInputFeatures = size(X_batch{1,1},2);
-seed_random = 24;
-[parameters] = initializeDL(numInputFeatures,labelsTrain,seed_random);
+seed_random = 1;
+[parameters] = initializeDL(numInputFeatures,seed_random);
 
 % Learning Parameters
 learnRate = 1e-3;
 numEpochs = 200;
 nBatch = 30;
-gradDecay = 0.8;
-sqGradDecay = 0.95;
 
 % Trailing Variables
-trailingAvgE = [];
-trailingAvgSqE = [];
-trailingAvgD = [];
-trailingAvgSqD = [];
+trailingAvg = [];
+trailingAvgSq = [];
 
 % Enable Monitor Window
 monitor = trainingProgressMonitor;
-monitor.Metrics = [ "ReconstructionLoss", ...
-                    "PredictionLoss", ...
+monitor.Metrics = [ "PredictionLoss", ...
                     "IterationTPpropR", ...
                     "IterationTPpropH", ...
                     "IterationTPpropW"];
 monitor.XLabel = "Iteration";
-groupSubPlot(monitor,"ReconstructionLoss","ReconstructionLoss");
 groupSubPlot(monitor,"PredictionLoss","PredictionLoss");
 groupSubPlot(monitor,"IterationTPpropR","IterationTPpropR");
 groupSubPlot(monitor,"IterationTPpropH","IterationTPpropH");
@@ -65,15 +60,13 @@ groupSubPlot(monitor1,"BatchTPpropH","BatchTPpropH");
 groupSubPlot(monitor1,"BatchTPpropW","BatchTPpropW");
 
 % Initialize Learning History
-netE_history = cell(numEpochs,nBatch);
-netD_history = cell(numEpochs,nBatch);
+parameters_history = cell(numEpochs,nBatch);
 xTPpropR_history = zeros(numEpochs,nBatch);
 xTPpropH_history = zeros(numEpochs,nBatch);
 xTPpropW_history = zeros(numEpochs,nBatch);
 BatchTPpropR_history = zeros(numEpochs,1);
 BatchTPpropH_history = zeros(numEpochs,1);
 BatchTPpropW_history = zeros(numEpochs,1);
-ReconstructionLoss_history = zeros(numEpochs,nBatch);
 PredictionLoss_history = zeros(numEpochs,nBatch);
 
 % Learning
@@ -83,52 +76,32 @@ while epoch < numEpochs && ~monitor.Stop
     xBatchTPpropR = [];
     xBatchTPpropH = [];
     xBatchTPpropW = [];
-    if epoch == 1
-        loss2_prev = ones(nBatch,1);
-        loss3_prev = ones(nBatch,1);
-    end
  
-    for iter = 1:nBatch
-        iter, j = iter;
-        if epoch == 1 && iter == 1
-            gradientsE_prev = [];
-            gradientsD_prev = [];
-        elseif epoch == 1
-            labelsLocal_prev = [];
-            labelsLocalH_prev = [];
-            labelsLocalW_prev = [];
+    for iter = 3:3 %1:nBatch
+        iter
+        if epoch == 1 
+            gradients_prev = [];
         end
 
-        % Normalize A
-        ANorm = normalizeAdjacency(A_batch{iter, 1});
-        
+
         % Evaluate loss and gradients.
-        [loss2,loss3,...
-            xTPpropR,xTPpropH,xTPpropW,...
-            gradientsE,gradientsD,...
-            labelsLocal_prev,labelsLocalH_prev,labelsLocalW_prev] = ...
+        [   loss, gradients, xTPprop, xTPpropH, xTPpropW] = ...
+            ...
             dlfeval(@modelLossV2,...
                     parameters,...
-                    dlarray(X_batch{iter}, 'BC'), ...
-                    ANorm, ...
+                    dlarray(X_batch{iter}), ...
+                    A_batch{iter, 1}, ...
                     tau_batch{iter},...
                     tauH_batch{iter},...
                     tauW_batch{iter},...
                     btype_label,...
                     label_height,...
-                    ind_batch{iter}, ...
-                    nelem,...
-                    nelem(iter));
+                    ind_batch{iter},...
+                    gradients_prev);
+        gradients_prev = gradients;
 
 
-
-
-
-        
-        loss2_prev(iter,1) = loss2;
-        loss3_prev(iter,1) = loss3;
-        gradientsE_prev = gradientsE;
-        gradientsD_prev = gradientsD;
+        % Save metrics for window
         xBatchTPpropR = [xBatchTPpropR; 
                         xTPpropR.*nelem(iter)./sum(nelem)];
         xBatchTPpropH = [xBatchTPpropH; 
@@ -138,24 +111,17 @@ while epoch < numEpochs && ~monitor.Stop
         xTPpropR_history(epoch,iter) = xTPpropR;
         xTPpropH_history(epoch,iter) = xTPpropH;
         xTPpropW_history(epoch,iter) = xTPpropW;
-        ReconstructionLoss_history(epoch,iter) = loss2;
-        PredictionLoss_history(epoch,iter) = loss3;
+        PredictionLoss_history(epoch,iter) = loss;
 
         % Update learnable parameters.
-        [netE,trailingAvgE,trailingAvgSqE] = adamupdate(netE, ...
-            gradientsE,trailingAvgE,trailingAvgSqE,...
-            (epoch-1).*nBatch+j,learnRate,gradDecay,sqGradDecay);
-        netE_history{epoch,iter} = netE;
+        [parameters,trailingAvg,trailingAvgSq] = adamupdate(parameters,gradients, ...
+            trailingAvg,trailingAvgSq,(epoch-1).*nBatch+iter,learnRate);
+        parameters_history{epoch,iter} = parameters;
 
-        [netD, trailingAvgD, trailingAvgSqD] = adamupdate(netD, ...
-            gradientsD,trailingAvgD,trailingAvgSqD,...
-            (epoch-1).*nBatch+j,learnRate,gradDecay,sqGradDecay);
-        netD_history{epoch,iter} = netD;
-
+        % Record metrics
         recordMetrics(monitor, ...
-            (epoch-1).*nBatch+j, ...
-            ReconstructionLoss=loss2, ...
-            PredictionLoss=loss3, ...
+            (epoch-1).*nBatch+iter, ...
+            PredictionLoss=loss, ...
             IterationTPpropR=xTPpropR, ...
             IterationTPpropH=xTPpropH, ...
             IterationTPpropW=xTPpropW);
@@ -173,11 +139,6 @@ while epoch < numEpochs && ~monitor.Stop
 end
 
 
-save("output/20241017_JointDC_WeightedLossAcrossClasses/outputTrainedModels.mat",... 
-    "netE_history","netD_history",...
-    "xTPpropR_history","xTPpropH_history","xTPpropW_history",...
-    "BatchTPpropR_history","BatchTPpropH_history","BatchTPpropW_history",...
-    "ReconstructionLoss_history","PredictionLoss_history")
 
 %% Determine the optimal iter and epoch
 

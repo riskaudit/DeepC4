@@ -1,4 +1,4 @@
-function [parameters] = initializeDL(numInputFeatures,labelsTrain,seed_random)
+function [parameters] = initializeDL(numInputFeatures,seed_random)
 
     parameters = struct;
 
@@ -29,6 +29,7 @@ function [parameters] = initializeDL(numInputFeatures,labelsTrain,seed_random)
     % 6 -> 3
     numIn = 6;
     numOut = 3;
+    sz = [numIn numOut];
     parameters.mult5.Weights = initializeGlorot(sz,seed_random,numOut,numIn,"double");
 
 end

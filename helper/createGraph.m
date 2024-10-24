@@ -1,6 +1,4 @@
-function [A_batch] = createGraph(X_batch,nelem)
-
-    k = 5; % no of nearest node to be connected with
+function [A_batch] = createGraph(X_batch,nelem,k)
 
     A_batch = cell(length(nelem),1);
     for i = 1:length(nelem)
