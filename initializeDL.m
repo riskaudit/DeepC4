@@ -1,44 +1,35 @@
 function [parameters] = initializeDL(numInputFeatures,labelsTrain,seed_random)
 
     parameters = struct;
-    numHiddenFeatureMaps = 240;
-    
-    sz = [numInputFeatures numHiddenFeatureMaps];
-    numOut = numHiddenFeatureMaps;
-    numIn = numInputFeatures;
+
+    % 14 - > 12
+    numIn = numInputFeatures; % 14
+    numOut = 12;
+    sz = [numInputFeatures numOut];
     parameters.mult1.Weights = initializeGlorot(sz,seed_random,numOut,numIn,"double");
     
-    sz = [numHiddenFeatureMaps numHiddenFeatureMaps];
-    numOut = numHiddenFeatureMaps;
-    numIn = numHiddenFeatureMaps;
+    % 12 -> 10
+    numIn = 12;
+    numOut = 10;
+    sz = [numIn numOut];
     parameters.mult2.Weights = initializeGlorot(sz,seed_random,numOut,numIn,"double");
     
-    sz = [numHiddenFeatureMaps numHiddenFeatureMaps];
-    numOut = numHiddenFeatureMaps;
-    numIn = numHiddenFeatureMaps;
+    % 10 -> 8
+    numIn = 10;
+    numOut = 8;
+    sz = [numIn numOut];
     parameters.mult3.Weights = initializeGlorot(sz,seed_random,numOut,numIn,"double");
     
-    sz = [numHiddenFeatureMaps numHiddenFeatureMaps];
-    numOut = numHiddenFeatureMaps;
-    numIn = numHiddenFeatureMaps;
+    % 8 -> 6
+    numIn = 8;
+    numOut = 6;
+    sz = [numIn numOut];
     parameters.mult4.Weights = initializeGlorot(sz,seed_random,numOut,numIn,"double");
     
-    sz = [numHiddenFeatureMaps numHiddenFeatureMaps];
-    numOut = numHiddenFeatureMaps;
-    numIn = numHiddenFeatureMaps;
+    % 6 -> 3
+    numIn = 6;
+    numOut = 3;
     parameters.mult5.Weights = initializeGlorot(sz,seed_random,numOut,numIn,"double");
-    
-    sz = [numHiddenFeatureMaps numHiddenFeatureMaps];
-    numOut = numHiddenFeatureMaps;
-    numIn = numHiddenFeatureMaps;
-    parameters.mult6.Weights = initializeGlorot(sz,seed_random,numOut,numIn,"double");
-    
-    classes = categories(labelsTrain);
-    numClasses = numel(classes);
-    sz = [numHiddenFeatureMaps 1];
-    numOut = 1;
-    numIn = numHiddenFeatureMaps;
-    parameters.mult7.Weights = initializeGlorot(sz,seed_random,numOut,numIn,"double");
 
 end
 
