@@ -66,6 +66,7 @@ while iter<maxiter && centroid_loss>1e-4
     T = intlinprog(objectiveFunction, 1:n*K, [A1; A2; A3], [b1; b2; b3], [], [], zeros(n*K,1), ones(n*K,1), options);
     [~, labelsNew] = max(reshape(T,n,K), [], 2);
 
+
     labelsNewOneHot = onehotencode(labelsNew,2,"ClassNames",1:K);
     Z_onehotencoded_new = repmat(Z,[1,1,K]).*repmat(reshape(labelsNewOneHot,[1 n K]),[D 1 1]);
     centroidsNew = sum(Z_onehotencoded_new,2)./sum(repmat(reshape(labelsNewOneHot,[1 n K]),[D 1 1]),2); % D n K
@@ -80,7 +81,7 @@ while iter<maxiter && centroid_loss>1e-4
     % evaluation for publication or paper
     centroid_loss = mse(extractdata(centroids),extractdata(centroidsNew)); %sum(diag(pdist2(extractdata(centroids(:)), extractdata(centroidsNew(:)))))
     if (sum(diag(pdist2(extractdata(centroids(:)), extractdata(centroidsNew(:)))) == zeros(K*D,1)) == K*D) || centroid_loss<=1e-4 || abs(centroid_loss-centroid_loss_prev)<=1e-4
-        disp('cluster succesful');
+        disp('cluster successful');
         labels = labelsNew;
         centroids = centroidsNew;
         % iter % show final iter

@@ -539,6 +539,8 @@ PredictionLoss_history = zeros(numEpochs,nBatch);
 %%
 
 epoch = 0; iter = 0; xIter = 0;
+
+
 while epoch < numEpochs && ~monitor.Stop
     epoch = epoch + 1
     xBatchTPpropR = [];
@@ -550,18 +552,26 @@ while epoch < numEpochs && ~monitor.Stop
     end
     % shuffle_indexes = randperm(nBatch);
     % 26, 29, 12, 6, 7
-    for iter = 3:3 % 1:nBatch
+    for iter = 3:3 %1:nBatch
         iter
         if epoch == 1 && iter == 1
             gradientsE_prev = [];
             gradientsD_prev = [];
+            labelsLocal_prev = [];
+            labelsLocalH_prev = [];
+            labelsLocalW_prev = [];
+        elseif epoch == 1
+            labelsLocal_prev = [];
+            labelsLocalH_prev = [];
+            labelsLocalW_prev = [];
         end
         j = iter;
         % iter = shuffle_indexes(j);
         % Evaluate loss and gradients.
         [loss2,loss3,...
             xTPpropR,xTPpropH,xTPpropW,...
-            gradientsE,gradientsD] = ...
+            gradientsE,gradientsD,...
+            labelsLocal_prev,labelsLocalH_prev,labelsLocalW_prev] = ...
             dlfeval(@modelLoss,...
                     netE,netD,...
                     dlarray(X_batch{iter}, 'BC'), ...
@@ -577,7 +587,8 @@ while epoch < numEpochs && ~monitor.Stop
                     nelem(iter),...
                     iter,...
                     gradientsE_prev,...
-                    gradientsD_prev,true);
+                    gradientsD_prev,true,epoch,...
+                    labelsLocal_prev,labelsLocalH_prev,labelsLocalW_prev);
         loss2_prev(iter,1) = loss2;
         loss3_prev(iter,1) = loss3;
         gradientsE_prev = gradientsE;
