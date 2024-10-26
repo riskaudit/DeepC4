@@ -14,7 +14,7 @@ function [loss] = ...
     %% Calculate PredictionLoss Roof 
     identified_classes_index = find(constraints_array(:,3)>0);
     distance_error_array = (repmat(centroids,[1,size(indtemp,1),1])-...
-                            repmat(Z(indtemp,1)',[1,1,sum(constraints_array(:,3)~=0)])).^2;
+                            repmat(Z(1,:),[1,1,sum(constraints_array(:,3)~=0)])).^2;
     distance_error_array = sqrt(sum(distance_error_array,1));
     distance_error_array = exp(distance_error_array)./sum(exp(distance_error_array),3);
     loss3_basedOnDistanceError = 0;
@@ -152,7 +152,7 @@ function [loss] = ...
     true_centroidH_index = find(constraints_array_H(:,3)>0);
     centroidH_index = (1:sum(constraints_array_H(:,3)~=0))';
     distance_error_arrayH = (repmat(centroidsH,[1,size(indtemp,1),1])-...
-                            repmat(Z(indtemp,2)',[1,1,sum(constraints_array_H(:,3)~=0)])).^2;
+                            repmat(Z(2,:),[1,1,sum(constraints_array_H(:,3)~=0)])).^2;
     distance_error_arrayH = sqrt(sum(distance_error_arrayH,1));
     distance_error_arrayH = exp(distance_error_arrayH)./sum(exp(distance_error_arrayH),3);
     loss3_basedOnDistanceErrorH = 0;
@@ -269,7 +269,7 @@ function [loss] = ...
     true_centroidW_index = find(constraints_array_W(:,3)>0);
     centroidW_index = (1:sum(constraints_array_W(:,3)~=0))';
     distance_error_arrayW = (repmat(centroidsW,[1,size(indtemp,1),1])-...
-                            repmat(Z(indtemp,3)',[1,1,sum(constraints_array_W(:,3)~=0)])).^2;
+                            repmat(Z(3,:),[1,1,sum(constraints_array_W(:,3)~=0)])).^2;
     distance_error_arrayW = sqrt(sum(distance_error_arrayW,1));
     distance_error_arrayW = exp(distance_error_arrayW)./sum(exp(distance_error_arrayW),3);
     loss3_basedOnDistanceErrorW = 0;

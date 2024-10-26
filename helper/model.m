@@ -10,7 +10,6 @@ function [Z] = model(parameters,X,ANorm)
     Z4 = relu(Z4);
     Z5 = ANorm * Z4 * parameters.mult4.Weights;
     Z5 = relu(Z5); 
-    Z = ANorm * Z5 * parameters.mult5.Weights;
-    % Z = sigmoid(Z6); 
+    Z = ANorm * Z5 * parameters.mult5.Weights; 
   
 end

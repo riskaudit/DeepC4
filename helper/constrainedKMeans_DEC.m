@@ -1,36 +1,11 @@
-function [labels,centroids] = constrainedKMeans_DEC(Z, K, tau, maxiter)
-%{
-Implements the constrained K-Means algorithm. This algorithm is a
-balance-driven version of the canonical K-Means clustering algorithm. It
-enforces a constraint that clusters have some minimum size. This script, in
-particular, implements Algorithm 2.2 from the following paper: 
-
-    - Bradley, P. S., Bennett, K. P., & Demiriz, A. (2000). Constrained 
-      K-means Clustering. Microsoft Research, Redmond, 20(0), 0.
-
-Inputs: 
-    - X:        Data matrix with shape (n,D), where X(i,:) is the ith data 
-                point in the dataset. 
-    - K:        Desired number of clusters (integer greater than 1). 
-    - tau:      length-K vector of integers greater than 1, with tau(k)  
-                storing the minimum number of data points in cluster k. 
-    - maxiter:  Maximum number of iterations.
-
-Outputs:
-    labels:     Unsupervised cluster labels. labels(i) = k iff data point 
-                i is in cluster k. 
-    centroids:  Matrix with shape (K,D), where centroids(k,:) is the 
-                centroid of data points with label=k in labels. 
-
-Written by Sam Polk (MITLL, 03-39) on 9/8/22. 
-
-%}
+function [labels,centroids] = constrainedKMeans_DEC(Z, K, tau, maxiter, labelsInitial)
+%Written by Sam Polk (MITLL, 03-39) on 9/8/22. 
 
 % Extract dataset size information
 [D,n] = size(Z);
 
 % Assign initial clusters and centroids
-labels = onehotencode(randi(K,n,1),2,"ClassNames",1:K);
+labels = onehotencode(labelsInitial,2,"ClassNames",1:K);
 Z_onehotencoded = repmat(Z,[1,1,K]).*repmat(reshape(labels,[1 n K]),[D 1 1]);
 centroids = sum(Z_onehotencoded,2)./sum(repmat(reshape(labels,[1 n K]),[D 1 1]),2); % D n K
 
