@@ -96,7 +96,7 @@ for idx_rID = 1:length(label2rasterID.RASTER_ID1)
 
         iQ =    Q.Province == province & ...
                 Q.Distict == district & ...
-                Q.Sector == sector & ...                        
+                Q.Sector == sector & ...
                 Q.numBuilding > 0;
         nQ =    Q(iQ,:);
         nQ =    sortrows(nQ,"HeightClass","ascend");
@@ -297,20 +297,6 @@ for idx_rID = 1:length(label2rasterID.RASTER_ID1)
             tauR(ttmp) = tauR(ttmp) + (length(find(x_s1vv>0))-sum(tauR));
         end
 
-        % WALL
-        uniq_WallClass = string(unique(Q.Material));
-        summary_WallClass = zeros(numel(uniq_WallClass),1);
-        for j = 1:numel(uniq_WallClass)
-            summary_WallClass(j,1) = sum(nQ.numBuilding(string(nQ.Material) == uniq_WallClass(j)));
-        end
-        summary_WallClass(isnan(summary_WallClass)) = 0;
-        summary_WallClass = summary_WallClass ./ sum(summary_WallClass);
-        tauW = floor(summary_WallClass .* length(find(x_s1vv>0)));
-        if sum(tauW) ~= length(find(x_s1vv>0))
-            ttmp = find(tauW == max(tauW),1);
-            tauW(ttmp) = tauW(ttmp) + (length(find(x_s1vv>0))-sum(tauW));
-        end
-
         % HEIGHT
         uniq_HeightClass = unique(Q.HeightClass);
         jointProb_HeightClassANDMacroTaxonomy = zeros(  numel(uniq_HeightClass), ...
@@ -336,6 +322,20 @@ for idx_rID = 1:length(label2rasterID.RASTER_ID1)
         %     ttmp = find(tauH == max(tauH),1);
         %     tauH(ttmp) = tauH(ttmp) + (length(find(x_s1vv>0))-sum(tauH));
         % end
+
+        % WALL
+        uniq_WallClass = string(unique(Q.Material));
+        summary_WallClass = zeros(numel(uniq_WallClass),1);
+        for j = 1:numel(uniq_WallClass)
+            summary_WallClass(j,1) = sum(nQ.numBuilding(string(nQ.Material) == uniq_WallClass(j)));
+        end
+        summary_WallClass(isnan(summary_WallClass)) = 0;
+        summary_WallClass = summary_WallClass ./ sum(summary_WallClass);
+        tauW = floor(summary_WallClass .* length(find(x_s1vv>0)));
+        if sum(tauW) ~= length(find(x_s1vv>0))
+            ttmp = find(tauW == max(tauW),1);
+            tauW(ttmp) = tauW(ttmp) + (length(find(x_s1vv>0))-sum(tauW));
+        end
 
         % MACROTAXONOMY 
         uniq_MacroTaxonomy = unique(Q.MacroTaxonomy);

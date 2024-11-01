@@ -249,16 +249,46 @@ for k = 1:5
     end
 end
 
-% for reporting - validation scores
-% sum(xTPpropR_history_test.*nelem_history_test)./sum(nelem_history_test) % 98.84
-% sum(xTPpropH_history_test.*nelem_history_test)./sum(nelem_history_test) % 94.12 
-% sum(xTPpropW_history_test.*nelem_history_test)./sum(nelem_history_test) % 94.28
-% sum(xTPpropR2_history_test.*nelem_history_test)./sum(nelem_history_test) % 98.58
-% sum(xTPpropH2_history_test.*nelem_history_test)./sum(nelem_history_test) % 7.13
-% sum(xTPpropW2_history_test.*nelem_history_test)./sum(nelem_history_test) % 50.19
-
 % for saving
 save("output/20241025_DeepGC4/crossvalidation/crossvalidationTest.mat",... 
     "xTPpropR_history_test","xTPpropH_history_test","xTPpropW_history_test",...
     "xTPpropR2_history_test","xTPpropH2_history_test","xTPpropW2_history_test",...
     "iter_history_test","nelem_history_test")
+
+% for saving
+load("output/20241025_DeepGC4/crossvalidation/crossvalidationTest.mat",... 
+    "xTPpropR_history_test","xTPpropH_history_test","xTPpropW_history_test",...
+    "xTPpropR2_history_test","xTPpropH2_history_test","xTPpropW2_history_test",...
+    "iter_history_test","nelem_history_test")
+
+a = zeros(5,1);
+b = zeros(5,1);
+c = zeros(5,1);
+d = zeros(5,1);
+e = zeros(5,1);
+f = zeros(5,1);
+for k = 1:5
+
+    % load parameter
+    load("output/20241025_DeepGC4/crossvalidation/outputTrainedModels_"+k+".mat",... 
+        "cv_idx_train","cv_idx_test")
+
+    %
+    iters = select_iter(cv_idx_test);
+    [~,idx] = intersect(iter_history_test,iters);
+    
+    % for reporting - training scores
+    a(k,1) = sum(xTPpropR_history_test(idx).*nelem_history_test(idx))./sum(nelem_history_test(idx));
+    b(k,1) = sum(xTPpropH_history_test(idx).*nelem_history_test(idx))./sum(nelem_history_test(idx));
+    c(k,1) = sum(xTPpropW_history_test(idx).*nelem_history_test(idx))./sum(nelem_history_test(idx));
+    d(k,1) = sum(xTPpropR2_history_test(idx).*nelem_history_test(idx))./sum(nelem_history_test(idx));
+    e(k,1) = sum(xTPpropH2_history_test(idx).*nelem_history_test(idx))./sum(nelem_history_test(idx));
+    f(k,1) = sum(xTPpropW2_history_test(idx).*nelem_history_test(idx))./sum(nelem_history_test(idx));
+
+end
+% mean(a) % 98.81
+% mean(b) % 94.25
+% mean(c) % 94.08
+% mean(d) % 98.60
+% mean(e) % 7.66
+% mean(f) % 48.13
