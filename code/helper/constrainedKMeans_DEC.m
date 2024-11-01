@@ -5,7 +5,11 @@ function [labels,centroids] = constrainedKMeans_DEC(Z, K, tau, maxiter, labelsIn
 [D,n] = size(Z);
 
 % Assign initial clusters and centroids
-labels = onehotencode(labelsInitial,2,"ClassNames",1:K);
+if ~isempty(labelsInitial)
+    labels = onehotencode(labelsInitial,2,"ClassNames",1:K);
+else
+    labels = onehotencode(randi(K,n,1),2,"ClassNames",1:K);
+end
 Z_onehotencoded = repmat(Z,[1,1,K]).*repmat(reshape(labels,[1 n K]),[D 1 1]);
 centroids = sum(Z_onehotencoded,2)./sum(repmat(reshape(labels,[1 n K]),[D 1 1]),2); % D n K
 
