@@ -1,18 +1,18 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="3.28.13-Firenze" maxScale="0" styleCategories="AllStyleCategories" hasScaleBasedVisibilityFlag="0" minScale="1e+08">
+<qgis version="3.28.13-Firenze" minScale="1e+08" styleCategories="AllStyleCategories" maxScale="0" hasScaleBasedVisibilityFlag="0">
   <flags>
     <Identifiable>1</Identifiable>
     <Removable>1</Removable>
     <Searchable>1</Searchable>
     <Private>0</Private>
   </flags>
-  <temporal fetchMode="0" enabled="0" mode="0">
+  <temporal mode="0" fetchMode="0" enabled="0">
     <fixedRange>
       <start></start>
       <end></end>
     </fixedRange>
   </temporal>
-  <elevation enabled="0" symbology="Line" zscale="1" band="1" zoffset="0">
+  <elevation zscale="1" zoffset="0" band="1" symbology="Line" enabled="0">
     <data-defined-properties>
       <Option type="Map">
         <Option type="QString" name="name" value=""/>
@@ -21,7 +21,7 @@
       </Option>
     </data-defined-properties>
     <profileLineSymbol>
-      <symbol type="line" frame_rate="10" alpha="1" clip_to_extent="1" is_animated="0" name="" force_rhr="0">
+      <symbol clip_to_extent="1" alpha="1" frame_rate="10" type="line" force_rhr="0" name="" is_animated="0">
         <data_defined_properties>
           <Option type="Map">
             <Option type="QString" name="name" value=""/>
@@ -29,7 +29,7 @@
             <Option type="QString" name="type" value="collection"/>
           </Option>
         </data_defined_properties>
-        <layer locked="0" pass="0" class="SimpleLine" enabled="1">
+        <layer pass="0" locked="0" class="SimpleLine" enabled="1">
           <Option type="Map">
             <Option type="QString" name="align_dash_pattern" value="0"/>
             <Option type="QString" name="capstyle" value="square"/>
@@ -70,7 +70,7 @@
       </symbol>
     </profileLineSymbol>
     <profileFillSymbol>
-      <symbol type="fill" frame_rate="10" alpha="1" clip_to_extent="1" is_animated="0" name="" force_rhr="0">
+      <symbol clip_to_extent="1" alpha="1" frame_rate="10" type="fill" force_rhr="0" name="" is_animated="0">
         <data_defined_properties>
           <Option type="Map">
             <Option type="QString" name="name" value=""/>
@@ -78,7 +78,7 @@
             <Option type="QString" name="type" value="collection"/>
           </Option>
         </data_defined_properties>
-        <layer locked="0" pass="0" class="SimpleFill" enabled="1">
+        <layer pass="0" locked="0" class="SimpleFill" enabled="1">
           <Option type="Map">
             <Option type="QString" name="border_width_map_unit_scale" value="3x:0,0,0,0,0,0"/>
             <Option type="QString" name="color" value="133,182,111,255"/>
@@ -120,9 +120,9 @@
   </pipe-data-defined-properties>
   <pipe>
     <provider>
-      <resampling enabled="false" zoomedOutResamplingMethod="nearestNeighbour" maxOversampling="2" zoomedInResamplingMethod="nearestNeighbour"/>
+      <resampling zoomedOutResamplingMethod="nearestNeighbour" enabled="false" zoomedInResamplingMethod="nearestNeighbour" maxOversampling="2"/>
     </provider>
-    <rasterrenderer type="paletted" opacity="1" nodataColor="" band="1" alphaBand="-1">
+    <rasterrenderer alphaBand="-1" band="1" type="paletted" nodataColor="" opacity="1">
       <rasterTransparency/>
       <minMaxOrigin>
         <limits>None</limits>
@@ -133,22 +133,17 @@
         <stdDevFactor>2</stdDevFactor>
       </minMaxOrigin>
       <colorPalette>
-        <paletteEntry alpha="255" value="1" color="#de6cda" label="Iron Sheets"/>
-        <paletteEntry alpha="255" value="2" color="#650dd9" label="Local Tiles"/>
-        <paletteEntry alpha="255" value="3" color="#50daa5" label="Industrial Tiles"/>
-        <paletteEntry alpha="255" value="4" color="#dbcc80" label="Asbestos"/>
-        <paletteEntry alpha="255" value="5" color="#d64d23" label="Concrete"/>
-        <paletteEntry alpha="255" value="6" color="#10a4cd" label="All Non-durable Materials"/>
-        <paletteEntry alpha="255" value="7" color="#84dd85" label="Grass"/>
-        <paletteEntry alpha="255" value="8" color="#e70e5d" label="Other Types"/>
-        <paletteEntry alpha="255" value="9" color="#3b58d8" label="Not Stated"/>
+        <paletteEntry label="Iron Sheets" alpha="255" value="1" color="#006cda"/>
+        <paletteEntry label="Local,  Industrial,  and Asbestos Tiles" alpha="255" value="2" color="#de6cda"/>
+        <paletteEntry label="Concrete" alpha="255" value="3" color="#d64d23"/>
+        <paletteEntry label="Grass" alpha="255" value="4" color="#84dd85"/>
       </colorPalette>
       <colorramp type="randomcolors" name="[source]">
         <Option/>
       </colorramp>
     </rasterrenderer>
-    <brightnesscontrast brightness="0" gamma="1" contrast="0"/>
-    <huesaturation colorizeBlue="128" invertColors="0" colorizeRed="255" saturation="0" grayscaleMode="0" colorizeGreen="128" colorizeStrength="100" colorizeOn="0"/>
+    <brightnesscontrast brightness="0" contrast="0" gamma="1"/>
+    <huesaturation colorizeGreen="128" invertColors="0" colorizeStrength="100" colorizeOn="0" grayscaleMode="0" saturation="0" colorizeBlue="128" colorizeRed="255"/>
     <rasterresampler maxOversampling="2"/>
     <resamplingStage>resamplingFilter</resamplingStage>
   </pipe>
