@@ -25,6 +25,8 @@ optloadTrainData = 2;
 % Learning Parameters
 learnRate = 1e-3;
 numEpochs = 500;
+gradDecay = 0.8;
+sqGradDecay = 0.95;
 
 % removed upon inspection to see if, at the sector level, learning exists
 select_iter = [2:12 14:15 18:21 24 26 28];
@@ -95,7 +97,8 @@ while epoch < numEpochs && ~monitor.Stop
                     btype_label,...
                     label_height,...
                     ind_batch{iter}, ...
-                    gradientsE_prev, gradientsD_prev);
+                    gradientsE_prev, gradientsD_prev, ...
+                    true);
         gradientsE_prev = gradientsE;
         gradientsD_prev = gradientsD;
 
@@ -135,6 +138,8 @@ while epoch < numEpochs && ~monitor.Stop
 end
 
 % global
+
+% DeepC4 - MinCostFlow
 save("output/20241025_DeepGC4/global/outputTrainedModels.mat",... 
     "netE_history","netD_history",...
     "xTPpropR_history","xTPpropH_history","xTPpropW_history",...

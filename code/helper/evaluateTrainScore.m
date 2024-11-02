@@ -170,7 +170,9 @@ sum(xTPpropW2_history_test.*nelem_history_test)./sum(nelem_history_test) % 56.78
 % mean(e) % 7.66
 % mean(f) % 48.13
 
-% for saving
+%% for saving
+
+% DeepC4 - MinCostFlow
 save("output/20241025_DeepGC4/global/trainingScore.mat",... 
     "xTPpropR_history_test","xTPpropH_history_test","xTPpropW_history_test",...
     "xTPpropR2_history_test","xTPpropH2_history_test","xTPpropW2_history_test",...
