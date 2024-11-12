@@ -163,28 +163,28 @@ function [  X_batch, ...
                         p_min = min(tmp);
             
                         p = p_min; target = full(sum(x_bldgftprnt, 'all'));
-                        while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
+                        while target > (sum(nQ.numBuilding)./n_bldg_per_pixel)
                             p = p + 0.001;
                             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
                         end
                         p = p - 2*0.001; 
                         target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             
-                        while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
+                        while target > (sum(nQ.numBuilding)./n_bldg_per_pixel)
                             p = p + 0.0001;
                             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
                         end
                         p = p - 2*0.0001; 
                         target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             
-                        while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
+                        while target > (sum(nQ.numBuilding)./n_bldg_per_pixel)
                             p = p + 0.00001;
                             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
                         end
                         p = p - 2*0.00001; 
                         target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             
-                        while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
+                        while target > (sum(nQ.numBuilding)./n_bldg_per_pixel)
                             p = p + 0.000001;
                             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
                         end
@@ -360,15 +360,15 @@ function [  X_batch, ...
 
 
 
-            % save("output/20240916_JointDC_Downstream1/input.mat",... ...
-            %     "X_batch","tau_batch","tauH_batch","tauW_batch","btype_label","label_height","ind_batch","nelem")
+            save("output/20241111_DeepC4/input.mat",... ...
+                "X_batch","tau_batch","tauH_batch","tauW_batch","btype_label","label_height","ind_batch","nelem")
     elseif  optloadTrainData == 2 % load
-            load("output/20240916_JointDC_Downstream1/input.mat",... 
+            load("output/20241111_DeepC4/input.mat",... 
             "X_batch", ...
             "tau_batch","tauH_batch","tauW_batch", ...
             "btype_label","label_height", ...
             "ind_batch","nelem")
-            disp("Successfully loaded 20240916_JointDC_Downstream1/input.mat")
+            disp("Successfully loaded 20241111_DeepC4/input.mat")
     end
 
 end
