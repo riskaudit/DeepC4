@@ -1,6 +1,6 @@
 %% Cross-Validation
 
-load("output/20240916_JointDC_Downstream1/input.mat",... ...
+load("output/20241111_DeepC4/input.mat",... ...
     "X_batch","tau_batch","tauH_batch","tauW_batch","btype_label","label_height","ind_batch","nelem")
 
 % Learning Parameters
@@ -122,7 +122,7 @@ for k = 1:5
     end
     
     % global
-    save("output/20241025_DeepGC4/crossvalidation/outputTrainedModels_"+k+".mat",... 
+    save("output/20241111_DeepC4/crossvalidation/outputTrainedModels_"+k+".mat",... 
         "netE_history","netD_history",...
         "cv_idx_train","cv_idx_test",...
         "xTPpropR_history","xTPpropH_history","xTPpropW_history",...
@@ -130,6 +130,8 @@ for k = 1:5
         "ReconstructionLoss_history","PredictionLoss_history")
 
 end
+
+
 
 % Evaluate test metric
 numEpochs = 1;
@@ -145,7 +147,7 @@ nelem_history_test = zeros(numEpochs,nBatch);
 for k = 1:5
 
     % load parameter
-    load("output/20241025_DeepGC4/crossvalidation/outputTrainedModels_"+k+".mat",... 
+    load("output/20241111_DeepC4/crossvalidation/outputTrainedModels_"+k+".mat",... 
         "netE_history","netD_history",...
         "cv_idx_train","cv_idx_test",...
         "xTPpropR_history","xTPpropH_history","xTPpropW_history",...
@@ -250,13 +252,13 @@ for k = 1:5
 end
 
 % for saving
-save("output/20241025_DeepGC4/crossvalidation/crossvalidationTest.mat",... 
+save("output/20241111_DeepC4/crossvalidation/crossvalidationTest.mat",... 
     "xTPpropR_history_test","xTPpropH_history_test","xTPpropW_history_test",...
     "xTPpropR2_history_test","xTPpropH2_history_test","xTPpropW2_history_test",...
     "iter_history_test","nelem_history_test")
 
 % for saving
-load("output/20241025_DeepGC4/crossvalidation/crossvalidationTest.mat",... 
+load("output/20241111_DeepC4/crossvalidation/crossvalidationTest.mat",... 
     "xTPpropR_history_test","xTPpropH_history_test","xTPpropW_history_test",...
     "xTPpropR2_history_test","xTPpropH2_history_test","xTPpropW2_history_test",...
     "iter_history_test","nelem_history_test")
@@ -270,7 +272,7 @@ f = zeros(5,1);
 for k = 1:5
 
     % load parameter
-    load("output/20241025_DeepGC4/crossvalidation/outputTrainedModels_"+k+".mat",... 
+    load("output/20241111_DeepC4/crossvalidation/outputTrainedModels_"+k+".mat",... 
         "cv_idx_train","cv_idx_test")
 
     %
@@ -286,9 +288,9 @@ for k = 1:5
     f(k,1) = sum(xTPpropW2_history_test(idx).*nelem_history_test(idx))./sum(nelem_history_test(idx));
 
 end
-% mean(a) % 98.81
-% mean(b) % 94.25
-% mean(c) % 94.08
-% mean(d) % 98.60
-% mean(e) % 7.66
-% mean(f) % 48.13
+mean(a) % 98.80
+mean(b) % 95.61
+mean(c) % 95.55
+mean(d) % 98.62
+mean(e) % 10.34
+mean(f) % 56.12
