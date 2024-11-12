@@ -1,14 +1,11 @@
-clear, clc, close
+clear, clc, close all
 cd '/Users/joshuadimasaka/Desktop/PhD/GitHub/DeepC4'
 
-%% load maskR
-[mask, maskR] = readgeoraster("data/MASK/rasterized_vector.tif");
-
 %% load building-level data from  Bachofer
-load("output/20240916_JointDC_Downstream1/input.mat",... ...
+load("output/20241111_DeepC4/input.mat",... ...
     "X_batch","tau_batch","tauH_batch","tauW_batch","btype_label","label_height","ind_batch","nelem")
 
-load("output/20241025_DeepGC4/global/outputTrainedModels.mat",... 
+load("output/20241111_DeepC4/global/outputTrainedModels.mat",... 
     "netE_history","netD_history",...
     "xTPpropR_history","xTPpropH_history","xTPpropW_history",...
     "xTPpropR2_history","xTPpropH2_history","xTPpropW2_history",...
@@ -39,7 +36,7 @@ xTPprop_byepoch = ...
     xTPpropR_byepoch(joint_possible_epochs_basedonlossRP)./3 + ...
     xTPpropH_byepoch(joint_possible_epochs_basedonlossRP)./3 + ...
     xTPpropW_byepoch(joint_possible_epochs_basedonlossRP)./3;
-joint_possible_epochs_basedonlossRP(xTPprop_byepoch==max(xTPprop_byepoch))
+joint_possible_epochs_basedonlossRP(xTPprop_byepoch==max(xTPprop_byepoch));
 xTPpropR2_byepoch = sum(xTPpropR2_history'...
     .*nelem(select_iter'))'...
     ./sum(nelem(select_iter'));
@@ -54,7 +51,7 @@ xTPprop2_byepoch = ...
     xTPpropH2_byepoch(joint_possible_epochs_basedonlossRP)./3 + ...
     xTPpropW2_byepoch(joint_possible_epochs_basedonlossRP)./3;
 xTPprop_byepoch_combined = xTPprop_byepoch./2 + xTPprop2_byepoch./2;
-selected_epoch = joint_possible_epochs_basedonlossRP(xTPprop_byepoch_combined==max(xTPprop_byepoch_combined));
+selected_epoch = joint_possible_epochs_basedonlossRP(xTPprop_byepoch_combined==max(xTPprop_byepoch_combined))
 
 netE = netE_history{selected_epoch,end};
 netD = netD_history{selected_epoch,end};
@@ -209,28 +206,28 @@ for idx_rID = 1:length(label2rasterID.RASTER_ID1)
             p_min = min(tmp);
 
             p = p_min; target = full(sum(x_bldgftprnt, 'all'));
-            while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
+            while target > (sum(nQ.numBuilding)./n_bldg_per_pixel)
                 p = p + 0.001;
                 target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             end
             p = p - 2*0.001; 
             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
 
-            while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
+            while target > (sum(nQ.numBuilding)./n_bldg_per_pixel)
                 p = p + 0.0001;
                 target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             end
             p = p - 2*0.0001; 
             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
 
-            while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
+            while target > (sum(nQ.numBuilding)./n_bldg_per_pixel)
                 p = p + 0.00001;
                 target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             end
             p = p - 2*0.00001; 
             target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
 
-            while target > (sum(nQ.numBuilding).*n_bldg_per_pixel)
+            while target > (sum(nQ.numBuilding)./n_bldg_per_pixel)
                 p = p + 0.000001;
                 target = sum(x_bldgftprnt .* (x_dynProb >= p), 'all');
             end
@@ -335,6 +332,7 @@ for idx_rID = 1:length(label2rasterID.RASTER_ID1)
         % uniq_HeightClass = string(unique(Q.HeightClass));
 
         % Height
+        uniq_HeightClass = unique(Q.HeightClass);
         summary_HeightClass = zeros(numel(uniq_HeightClass),1);
         for j = 1:numel(uniq_HeightClass)
             summary_HeightClass(j,1) = sum(nQ.numBuilding(string(nQ.HeightClass) == uniq_HeightClass(j)));
@@ -527,81 +525,22 @@ for idx_rID = 1:length(label2rasterID.RASTER_ID1)
         y_macrotaxo(valid_idx==1) = macro_taxonomy_assignment_id;
         toc, disp("Macro-Taxonomy Assigned"), tic
 
-        %% HEIGHT GIVEN WALL
-        % height_class_assignment = strings(size(X,1),1);
-        % height_class_assignment_id = zeros(size(X,1),1);
-        % uniq_MacroTaxonomy_from_assignment = unique(macro_taxonomy_assignment);
-        % for j = 1:numel(uniq_MacroTaxonomy_from_assignment) % per macro taxo category
-        % 
-        %     % same explanation as before
-        %     tmp_idx5 = find(uniq_MacroTaxonomy == string(uniq_MacroTaxonomy_from_assignment(j,1))   );
-        %     tmp_idx6 = find(macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) );
-        % 
-        %     tau_XXX = round(    numel(tmp_idx6) * ...
-        %     jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) ./ ...
-        %     sum(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) ;
-        %     tau_XXX(isnan(tau_XXX)) = 0;
-        % 
-        %     if size(X(macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1))) ,1) ...
-        %                    < sum(tau_XXX(tau_XXX ~= 0))
-        %         tau_XXX = tau_XXX - (tau_XXX == max(tau_XXX)) .* ...
-        %         (sum(tau_XXX(tau_XXX ~= 0)) - ...
-        %         size(X(  macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ),1));
-        %     elseif size(X(macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1))) ,1) == 1
-        %         tau_XXX(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) == max(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) = 1;
-        %         tau_XXX(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5) ~= max(jointProb_HeightClassANDMacroTaxonomy(:,tmp_idx5))) = 0;
-        %         tau_XXX(isnan(tau_XXX)) = 0;
-        %     end
-        %     if sum(tau_XXX) ~= size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)
-        %         ttmp = find(tau_XXX == max(tau_XXX),1);
-        %         tau_XXX(ttmp) = tau_XXX(ttmp) + (size(X( macro_taxonomy_assignment == string(uniq_MacroTaxonomy_from_assignment(j,1)) ,:),1)-sum(tau_XXX));
-        %     end
-        %     err = 1; failed = 1;
-        %     while err > 0.01 | failed == 1
-        %         try
-        %             [labelsH,centroidsH] = constrainedKMeans_DEC(Z(2, macro_taxonomy_assignment==string(uniq_MacroTaxonomy_from_assignment(j,1)) ),...
-        %                                                          numel(tau_XXX(tau_XXX ~= 0)), ...
-        %                                                          tau_XXX(tau_XXX ~= 0), 50);
-        %             failed = 0;
-        %         catch MyErr
-        %             failed = 1;
-        %         end
-        %         if failed == 0
-        %             err = sum(abs((tau_XXX(tau_XXX ~= 0))'-(histcounts(labelsH)))) ./ sum(tau_XXX(tau_XXX ~= 0));
-        %         end
-        %     end
-        %     height_class_assignment_sub = strings(size(tmp_idx6,1),1);
-        %     nonzero_idx_tau_XXX = find(tau_XXX ~= 0);
-        %     for i = 1:sum(tau_XXX > 1e-5)
-        %         iX = find(labelsH == i);
-        %         height_class_assignment_sub(iX,:) = uniq_HeightClass(nonzero_idx_tau_XXX(i));
-        %     end
-        %     height_class_assignment(tmp_idx6) = height_class_assignment_sub;
-        %     for i = 1:numel(uniq_HeightClass)
-        %         height_class_assignment_id((height_class_assignment==uniq_HeightClass(i)),1) = i;
-        %     end
-        % 
-        % end
-        % y_height(valid_idx==1) = height_class_assignment_id;
-        % toc, disp("Height Assigned"), tic
-        
-
     end
 end
 
 % Export
-geotiffwrite("output/20241025_DeepGC4/global/map/y_height.tif",(y_height),maskR)
-geotiffwrite("output/20241025_DeepGC4/global/map/y_roof.tif",(y_roof),maskR)
-geotiffwrite("output/20241025_DeepGC4/global/map/y_macrotaxo.tif",(y_macrotaxo),maskR)
-geotiffwrite("output/20241025_DeepGC4/global/map/y_wall.tif",(y_wall),maskR)
+geotiffwrite("output/20241111_DeepC4/global/map/y_height.tif",(y_height),maskR)
+geotiffwrite("output/20241111_DeepC4/global/map/y_roof.tif",(y_roof),maskR)
+geotiffwrite("output/20241111_DeepC4/global/map/y_macrotaxo.tif",(y_macrotaxo),maskR)
+geotiffwrite("output/20241111_DeepC4/global/map/y_wall.tif",(y_wall),maskR)
 
 %% True positive map
 
 % 1 indicates misprediction, 2 indicates TP
 
-% [y_roof, ~] = readgeoraster('output/20241025_DeepGC4/global/map/y_roof.tif');
-% [y_height, ~] = readgeoraster('output/20241025_DeepGC4/global/map/y_height.tif');
-% [y_wall, ~] = readgeoraster('output/20241025_DeepGC4/global/map/y_wall.tif');
+% [y_roof, ~] = readgeoraster('output/20241111_DeepC4/global/map/y_roof.tif');
+% [y_height, ~] = readgeoraster('output/20241111_DeepC4/global/map/y_height.tif');
+% [y_wall, ~] = readgeoraster('output/20241111_DeepC4/global/map/y_wall.tif');
 
 TProof =  zeros(size(y_roof));
 TProof = TProof + ...
@@ -646,8 +585,7 @@ TPwall = TPwall + ...
        (btype_label==7) .* (y_wall==2|y_wall==3|y_wall==4|y_wall==6));
 TPwall(y_wall==0 | btype_label< 1 | btype_label>7) = 0;
 
-
-geotiffwrite("output/20241025_DeepGC4/global/map/TProof.tif",(TProof),maskR)
-geotiffwrite("output/20241025_DeepGC4/global/map/TPheight.tif",(TPheight),maskR)
-geotiffwrite("output/20241025_DeepGC4/global/map/TPwall.tif",(TPwall),maskR)
+geotiffwrite("output/20241111_DeepC4/global/map/precision_roof.tif",(TProof),maskR)
+geotiffwrite("output/20241111_DeepC4/global/map/precision_height.tif",(TPheight),maskR)
+geotiffwrite("output/20241111_DeepC4/global/map/precision_wall.tif",(TPwall),maskR)
 
