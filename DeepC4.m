@@ -24,7 +24,7 @@ optloadTrainData = 2;
 
 % Learning Parameters
 learnRate = 1e-3;
-numEpochs = 500;
+numEpochs = 400;
 gradDecay = 0.8;
 sqGradDecay = 0.95;
 
@@ -140,7 +140,7 @@ end
 % global
 
 % DeepC4 - MinCostFlow
-save("output/20241025_DeepGC4/global/outputTrainedModels.mat",... 
+save("output/20241111_DeepC4/global/outputTrainedModels.mat",... 
     "netE_history","netD_history",...
     "xTPpropR_history","xTPpropH_history","xTPpropW_history",...
     "xTPpropR2_history","xTPpropH2_history","xTPpropW2_history",...
