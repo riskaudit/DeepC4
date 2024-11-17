@@ -23,21 +23,41 @@ nelem_history_test = zeros(numEpochs,nBatch);
 % determine optimal epch and iter
 lossR_byepoch = sum(ReconstructionLoss_history'.*nelem(select_iter))...
                 ./sum(nelem(select_iter));
-plot(lossR_byepoch);
-figure(1); fig = plot(lossR_byepoch); 
-grid on; xlabel('Epoch'); ylabel('Reconstruction Loss'); 
-saveas(fig, 'output/20241111_DeepC4/global/figure/lossR.png')
-savefig('output/20241111_DeepC4/global/figure/lossR.fig')
-
-
 lossP_byepoch = sum(PredictionLoss_history'.*nelem(select_iter))...
                 ./sum(nelem(select_iter));
-plot(lossP_byepoch)
 
-figure(1); fig = plot(lossP_byepoch); 
-grid on; xlabel('Epoch'); ylabel('Prediction Loss'); 
-saveas(fig, 'output/20241111_DeepC4/global/figure/lossP.png')
-savefig('output/20241111_DeepC4/global/figure/lossP.fig')
+
+%%
+% figure(1);
+% t=tiledlayout(2,1,'TileSpacing','none');
+% 
+% nexttile;
+% plot(1:400, lossR_byepoch,'LineWidth',2.0); 
+% hold on; plot(1:400, movmean(lossR_byepoch,10),'LineWidth',2.0); hold off
+% xticks([0 100 200 300 400]);
+% xticklabels("");
+% yticks([0.6 0.7 0.8 0.9 1.0 1.1]);
+% ylim([0.5 1.2])
+% grid on
+% ylabel('Reconstruction Loss');
+% xline(184,'--k',{'x = 184'}, 'LineWidth',1.5); yline(0.6552,'--k',{'y = 0.6552'}, 'LineWidth',1.5);
+% fontsize(23,"points"); ytickformat('%.1f')
+% legend({'',sprintf('10-point\nAverage')},'Location','northeast');
+% 
+% nexttile;
+% plot(lossP_byepoch,'LineWidth',2.0); 
+% hold on; plot(1:400, movmean(lossP_byepoch,10),'LineWidth',2.0); hold off
+% xticks([0 100 200 300 400]);
+% yticks([3.35 3.4 3.45 3.5 3.55]);
+% ylim([3.3 3.6])
+% grid on
+% ylabel('Prediction Loss');
+% xline(184,'--k', 'LineWidth',1.5); 
+% yline(3.376,'--k',{'y = 3.376'}, 'LineWidth',1.5,'LabelVerticalAlignment','bottom','LabelHorizontalAlignment','left');
+% fontsize(23,"points"); ytickformat('%.2f')
+% xlabel('Epoch')
+% savefig('docs/ISPRS/figures/fig_Loss.fig')
+% exportgraphics(gcf,'docs/ISPRS/figures/fig_Loss.pdf','ContentType','vector')
 
 possible_epochs_basedonlossR = (lossR_byepoch <= quantile(lossR_byepoch,0.5));
 possible_epochs_basedonlossP = (lossP_byepoch <= quantile(lossP_byepoch,0.5));
@@ -46,30 +66,61 @@ joint_possible_epochs_basedonlossRP = find(possible_epochs_basedonlossR & possib
 xTPpropR_byepoch = sum(xTPpropR_history'...
     .*nelem(select_iter'))'...
     ./sum(nelem(select_iter'));
-% plot(xTPpropR_byepoch)
-figure(1); fig = plot(xTPpropR_byepoch); 
-grid on; xlabel('Epoch'); ylabel('Proportion of True Positives'); 
-saveas(fig, 'output/20241111_DeepC4/global/figure/xTPpropR_byepoch.png')
-savefig('output/20241111_DeepC4/global/figure/xTPpropR_byepoch.fig')
-
-
 xTPpropH_byepoch = sum(xTPpropH_history'...
     .*nelem(select_iter'))'...
     ./sum(nelem(select_iter'));
-% plot(xTPpropH_byepoch)
-figure(1); fig = plot(xTPpropH_byepoch); 
-grid on; xlabel('Epoch'); ylabel('Proportion of True Positives'); 
-saveas(fig, 'output/20241111_DeepC4/global/figure/xTPpropH_byepoch.png')
-savefig('output/20241111_DeepC4/global/figure/xTPpropH_byepoch.fig')
-
 xTPpropW_byepoch = sum(xTPpropW_history'...
     .*nelem(select_iter'))'...
     ./sum(nelem(select_iter'));
-% plot(xTPpropW_byepoch)
-figure(1); fig = plot(xTPpropW_byepoch); 
-grid on; xlabel('Epoch'); ylabel('Proportion of True Positives'); 
-saveas(fig, 'output/20241111_DeepC4/global/figure/xTPpropW_byepoch.png')
-savefig('output/20241111_DeepC4/global/figure/xTPpropW_byepoch.fig')
+
+
+%%
+% figure(1);
+% t=tiledlayout(3,1,'TileSpacing','none');
+% 
+% nexttile;
+% plot(1:400, 100.*xTPpropR_byepoch,'LineWidth',2.0); 
+% hold on; plot(1:400, movmean(100.*xTPpropR_byepoch,10),'LineWidth',2.0); hold off
+% xticks([0 100 200 300 400]);
+% xticklabels("");
+% yticks([98.95 99 99.05 99.1 99.15]);
+% ylim([98.90 99.20])
+% grid on
+% ylabel('Roof');
+% xline(184,'--k',{'x = 184'}, 'LineWidth',1.5); 
+% yline(99.03,'--k',{'y = 99.03%'}, 'LineWidth',1.5,'LabelVerticalAlignment','bottom','LabelHorizontalAlignment','right');
+% fontsize(23,"points"); ytickformat('%.2f')
+% legend({'',sprintf('10-point\nAverage')},'Location','northwest');
+% 
+% nexttile;
+% plot(1:400, 100.*xTPpropW_byepoch,'LineWidth',2.0); 
+% hold on; plot(1:400, movmean(100.*xTPpropW_byepoch,10),'LineWidth',2.0); hold off
+% xticks([0 100 200 300 400]);
+% xticklabels("");
+% grid on
+% yticks([95.5 96 96.5 97]);
+% ylim([95 97.5])
+% ylabel('Wall');
+% xline(184,'--k', 'LineWidth',1.5); 
+% yline(96.45,'--k',{'y = 96.45%'}, 'LineWidth',1.5,'LabelVerticalAlignment','top','LabelHorizontalAlignment','right');
+% fontsize(23,"points"); ytickformat('%.2f')
+% 
+% nexttile;
+% plot(1:400, 100.*xTPpropH_byepoch,'LineWidth',2.0); 
+% hold on; plot(1:400, movmean(100.*xTPpropH_byepoch,10),'LineWidth',2.0); hold off
+% xticks([0 100 200 300 400]);
+% grid on
+% yticks([95.25 95.5 95.75 96 96.25]);
+% ylim([95 96.5])
+% ylabel('Height');
+% xline(184,'--k', 'LineWidth',1.5); 
+% yline(95.87,'--k',{'y = 95.87%'}, 'LineWidth',1.5,'LabelVerticalAlignment','top','LabelHorizontalAlignment','left');
+% fontsize(23,"points"); ytickformat('%.2f')
+% 
+% 
+% xlabel(t, 'Epoch'); ylabel(t, 'Proportion of True Positives')
+% savefig('docs/ISPRS/figures/fig_TP.fig')
+% exportgraphics(gcf,'docs/ISPRS/figures/fig_TP.pdf','ContentType','vector')
 
 xTPprop_byepoch = ...
     xTPpropR_byepoch(joint_possible_epochs_basedonlossRP)./3 + ...
@@ -80,34 +131,61 @@ joint_possible_epochs_basedonlossRP(xTPprop_byepoch==max(xTPprop_byepoch))
 xTPpropR2_byepoch = sum(xTPpropR2_history'...
     .*nelem(select_iter'))'...
     ./sum(nelem(select_iter'));
-% plot(xTPpropR2_byepoch)
-figure(1); fig = plot(xTPpropR2_byepoch); 
-grid on; xlabel('Epoch'); ylabel('Proportion of True Positives'); 
-saveas(fig, 'output/20241111_DeepC4/global/figure/xTPpropR2_byepoch.png')
-savefig('output/20241111_DeepC4/global/figure/xTPpropR2_byepoch.fig')
-
-
 xTPpropH2_byepoch = sum(xTPpropH2_history'...
     .*nelem(select_iter'))'...
     ./sum(nelem(select_iter'));
-% plot(xTPpropH2_byepoch)
-figure(1); fig = plot(xTPpropH2_byepoch); 
-grid on; xlabel('Epoch'); ylabel('Proportion of True Positives'); 
-saveas(fig, 'output/20241111_DeepC4/global/figure/xTPpropH2_byepoch.png')
-savefig('output/20241111_DeepC4/global/figure/xTPpropH2_byepoch.fig')
-
-
-
 xTPpropW2_byepoch = sum(xTPpropW2_history'...
     .*nelem(select_iter'))'...
     ./sum(nelem(select_iter'));
-% plot(xTPpropW2_byepoch)
 
 
-figure(1); fig = plot(xTPpropW2_byepoch); 
-grid on; xlabel('Epoch'); ylabel('Proportion of True Positives'); 
-saveas(fig, 'output/20241111_DeepC4/global/figure/xTPpropW2_byepoch.png')
-savefig('output/20241111_DeepC4/global/figure/xTPpropW2_byepoch.fig')
+%%
+figure(1);
+t=tiledlayout(3,1,'TileSpacing','none');
+
+nexttile;
+plot(1:400, 100.*xTPpropR2_byepoch,'LineWidth',2.0); 
+hold on; plot(1:400, movmean(100.*xTPpropR2_byepoch,10),'LineWidth',2.0); hold off
+xticks([0 100 200 300 400]);
+xticklabels("");
+yticks([98.75 99 99.25 99.5 99.75]);
+ylim([98.5 100])
+grid on
+ylabel('Roof');
+xline(184,'--k', 'LineWidth',1.5); 
+yline(99.82,'--k',{'y = 99.82%'}, 'LineWidth',1.5,'LabelVerticalAlignment','bottom','LabelHorizontalAlignment','right');
+fontsize(23,"points"); ytickformat('%.2f')
+legend({'',sprintf('10-point\nAverage')},'Location','southwest');
+
+nexttile;
+plot(1:400, 100.*xTPpropW2_byepoch,'LineWidth',2.0); 
+hold on; plot(1:400, movmean(100.*xTPpropW2_byepoch,10),'LineWidth',2.0); hold off
+xticks([0 100 200 300 400]);
+xticklabels("");
+grid on
+yticks([45 50 55 60 65]);
+ylim([40 70])
+ylabel('Wall');
+xline(184,'--k',{'x = 184'}, 'LineWidth',1.5, 'LabelVerticalAlignment','bottom'); 
+yline(60.02,'--k',{'y = 60.02%'}, 'LineWidth',1.5,'LabelVerticalAlignment','top','LabelHorizontalAlignment','right');
+fontsize(23,"points"); ytickformat('%.2f')
+
+nexttile;
+plot(1:400, 100.*xTPpropH2_byepoch,'LineWidth',2.0); 
+hold on; plot(1:400, movmean(100.*xTPpropH2_byepoch,10),'LineWidth',2.0); hold off
+xticks([0 100 200 300 400]);
+grid on
+yticks([6 8 10 12 14]);
+ylim([4 16])
+ylabel('Height');
+xline(184,'--k', 'LineWidth',1.5); 
+yline(9.68,'--k',{'y = 9.68%'}, 'LineWidth',1.5,'LabelVerticalAlignment','top','LabelHorizontalAlignment','center');
+fontsize(23,"points"); ytickformat('%.2f')
+
+
+xlabel(t, 'Epoch'); ylabel(t, 'Weighted Proportion of True Positives')
+savefig('docs/ISPRS/figures/fig_TPw.fig')
+exportgraphics(gcf,'docs/ISPRS/figures/fig_TPw.pdf','ContentType','vector')
 
 
 xTPprop2_byepoch = ...
