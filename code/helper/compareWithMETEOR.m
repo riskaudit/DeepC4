@@ -134,5 +134,57 @@ B = B*100/60
 P = 2.*abs(A-B)./(A+B)
 
 
-%% COMPARISON in terms of TOTAL BUILDING COUNT PER VULNERABILITY TYPE
-y_roof = readgeoraster("output/20241025_DeepGC4/global/map/y_roof.tif");
+%% COMPARISON in terms of 500-m pixel   
+A = nbldg_A + nbldg_C3L + nbldg_C3L + nbldg_C3M + nbldg_INF + ...
+    nbldg_RS + nbldg_UCB + nbldg_UFB + nbldg_W + nbldg_W5;
+B = y_mt_01 + y_mt_02 + y_mt_03 + y_mt_04 + ...
+    y_mt_05 + y_mt_06 + y_mt_07 + y_mt_08 + ...
+    y_mt_09 + y_mt_10 + y_mt_11 + y_mt_12 + ...
+    y_mt_13 + y_mt_14 + y_mt_15 + y_mt_16;
+C = (A==0 & B~=0) .* 1 + ...
+    (A~=0 & B==0) .* 2 + ...
+    (A~=0 & B~=0 & A>=B) .* 3 + ...
+    (A~=0 & B~=0 & A<B) .* 4;
+D = 100.*(B-A)./((A+B)./2);
+D(D==-200) = NaN;
+D(D==200) = NaN;
+geotiffwrite("output/20241111_DeepC4/global/projectedintoMETEOR/y_METEORvsDeepC4.tif",C,R)
+geotiffwrite("output/20241111_DeepC4/global/projectedintoMETEOR/percentDiff_METEORvsDeepC4.tif",D,R)
+
+[adm1,~] = readgeoraster("output/20241111_DeepC4/global/projectedIntoMETEOR/admin1.tif");
+
+    
+figure(1)
+subD = D(adm1==5);
+subD(isnan(subD)) = [];
+histogram(subD,10,'Normalization','probability','BinLimits',[-200 200]); grid on
+
+
+
+
+
+
+
+subC = C(adm1==1);
+subC = subC(:);
+subC(subC==0) = [];
+% hB = bar(histcounts(subC,'Normalization', 'probability'))
+hB=bar( 1:4,...
+        diag(histcounts(subC,'Normalization', 'probability'),0),...
+        'stacked');
+hB(1).BarWidth = 1;
+
+xtips1 = hB(1).XEndPoints;
+ytips1 = hB(4).YEndPoints;
+labels1 = string(100.*histcounts(subC,'Normalization', 'probability'));
+text(xtips1,ytips1,labels1,'HorizontalAlignment','center',...
+    'VerticalAlignment','bottom')
+
+grid on
+% TestL={ 'METEOR AND NOT(DeepC4)',...
+%         'NOT(METEOR) AND DeepC4',...
+%         'DeepC4 < METEOR',...
+%         'METEOR < DeepC4'};
+% hLg=legend(TestL,'Location','northwest');
+set(hB,{'FaceColor'},{'#c8b738';'#36c96f';'#4859dd';'#ea5ab3'})
+ylim([0 0.5])
