@@ -41,7 +41,7 @@ Due to the limited file storage capacity in GitHub, we provide all data and resu
    - `computeMetrics.m`
    - `constrainedKMeans_DEC.m`
    - `createAE.m`
-   - `crossValidation.m`
+   - `crossValidation.m` 
    - `downstreamMap.m`
    - `encodeConstraints.m`
    - `evaluateTrainScore.m`
