@@ -34,7 +34,7 @@ Due to the limited file storage capacity in GitHub, we provide all data and resu
    - `downloadDynamicWorldLULC.py`
    - `downloadS1_whole.py`
    - `downloadS2_whole.py`
-3. In `code\helper`:
+3. In `code\helper`: 
    - `clusterLatent.m`
    - `compareWithMETEORnGEM.m`
    - `computeLoss.m`
