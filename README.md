@@ -101,7 +101,7 @@ Feel free to use our recommended BibTex-formatted entry below.
                    of Urban Morphology}},
   year         = 2024,
   publisher    = {Zenodo},
-  month        = nov,
+  month        = nov, 
   doi          = {10.5281/zenodo.14207720},
   url          = {https://doi.org/10.5281/zenodo.14207720}
 }
